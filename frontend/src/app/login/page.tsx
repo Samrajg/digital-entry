@@ -45,16 +45,22 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen w-full flex items-center justify-center bg-gradient-to-br from-slate-900 via-slate-800 to-slate-950 p-4 font-sans selection:bg-cyan-500 selection:text-white">
+    <div className="min-h-screen w-full flex items-center justify-center bg-gradient-to-br from-slate-50 via-white to-slate-100 p-4 font-sans selection:bg-blue-600 selection:text-white relative overflow-hidden">
+      {/* Background ambient glows */}
+      <div className="absolute top-1/4 left-1/4 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-blue-500/5 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute bottom-1/4 right-1/4 translate-x-1/2 translate-y-1/2 w-96 h-96 bg-cyan-500/5 rounded-full blur-3xl pointer-events-none" />
+
       {/* TODO: Before Production:
           - PINs must be hashed and verified.
           - Proper JWT/session cookies must be implemented.
           - Protected routes and authorization checks must be added. */}
-      <div className="w-full max-w-md bg-slate-900/40 backdrop-blur-xl border border-slate-700/50 rounded-2xl p-8 shadow-2xl transition-all duration-300 hover:border-slate-600/50">
+      
+      {/* Dark Blue Login Card */}
+      <div className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-2xl p-8 shadow-2xl z-10 transition-all duration-300">
         
         {/* Header */}
         <div className="text-center mb-8">
-          <div className="inline-flex p-3 bg-gradient-to-tr from-cyan-500 to-blue-600 rounded-xl mb-4 shadow-lg shadow-cyan-500/20">
+          <div className="inline-flex p-3 bg-gradient-to-tr from-blue-900 to-blue-950 border border-blue-800/80 rounded-xl mb-4 shadow-lg shadow-blue-900/10">
             <Shield className="w-8 h-8 text-white animate-pulse" />
           </div>
           <h1 className="text-2xl font-bold tracking-tight text-white mb-2">Digital Entry</h1>
@@ -63,7 +69,7 @@ export default function LoginPage() {
 
         {/* Error Alert */}
         {error && (
-          <div className="mb-6 p-4 bg-red-500/10 border border-red-500/30 rounded-xl text-red-400 text-sm flex items-start gap-3 animate-fadeIn">
+          <div className="mb-6 p-4 bg-red-500/10 border border-red-500/30 rounded-xl text-red-400 text-sm flex items-start gap-3">
             <span className="font-semibold">Error:</span>
             <span>{error}</span>
           </div>
@@ -84,7 +90,7 @@ export default function LoginPage() {
                 onChange={(e) => setUsername(e.target.value)}
                 placeholder="Enter username"
                 disabled={isLoading}
-                className="w-full bg-slate-950/50 border border-slate-700/60 rounded-xl py-3 pl-10 pr-4 text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-colors disabled:opacity-50"
+                className="w-full bg-slate-950/40 border border-slate-800/80 rounded-xl py-3 pl-10 pr-4 text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors disabled:opacity-50"
               />
             </div>
           </div>
@@ -103,16 +109,16 @@ export default function LoginPage() {
                 placeholder="••••"
                 maxLength={8}
                 disabled={isLoading}
-                className="w-full bg-slate-950/50 border border-slate-700/60 rounded-xl py-3 pl-10 pr-4 text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-colors tracking-widest disabled:opacity-50"
+                className="w-full bg-slate-950/40 border border-slate-800/80 rounded-xl py-3 pl-10 pr-4 text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors tracking-widest disabled:opacity-50"
               />
             </div>
           </div>
 
-          {/* Submit Button */}
+          {/* Submit Button (Dark Blue Gradient) */}
           <button
             type="submit"
             disabled={isLoading}
-            className="w-full bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-medium py-3 rounded-xl shadow-lg shadow-cyan-500/10 hover:shadow-cyan-500/20 active:scale-[0.98] transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+            className="w-full bg-gradient-to-r from-blue-900 to-blue-950 hover:from-blue-800 hover:to-blue-900 border border-blue-800/50 text-white font-medium py-3 rounded-xl shadow-lg active:scale-[0.98] transition-all flex items-center justify-center gap-2 disabled:opacity-50"
           >
             {isLoading ? (
               <>

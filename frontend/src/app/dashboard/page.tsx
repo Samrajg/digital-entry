@@ -34,10 +34,10 @@ export default function DashboardPage() {
 
   if (isChecking || !currentUser) {
     return (
-      <div className="min-h-screen bg-slate-950 flex items-center justify-center">
-        <div className="text-center text-slate-400 space-y-3">
-          <Activity className="w-8 h-8 text-cyan-500 animate-spin mx-auto" />
-          <p className="text-sm">Verifying session...</p>
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+        <div className="text-center text-slate-500 space-y-3">
+          <Activity className="w-8 h-8 text-blue-950 animate-spin mx-auto" />
+          <p className="text-sm font-medium">Verifying session...</p>
         </div>
       </div>
     );
@@ -60,31 +60,31 @@ export default function DashboardPage() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-white font-sans">
-      {/* Top Header */}
-      <header className="border-b border-slate-800 bg-slate-900/50 backdrop-blur-md sticky top-0 z-10 px-6 py-4 flex items-center justify-between">
+    <div className="min-h-screen bg-slate-50 text-slate-900 font-sans">
+      {/* Dark Blue Header Navbar */}
+      <header className="border-b border-blue-900/30 bg-blue-950 text-white sticky top-0 z-10 px-6 py-4 flex items-center justify-between shadow-md">
         <div className="flex items-center gap-3">
-          <div className="p-2 bg-gradient-to-tr from-cyan-500 to-blue-600 rounded-lg">
+          <div className="p-2 bg-blue-900 border border-blue-800 rounded-lg">
             <Shield className="w-5 h-5 text-white" />
           </div>
           <div>
             <h1 className="font-bold text-lg leading-tight">Digital Entry</h1>
-            <p className="text-slate-400 text-xs uppercase tracking-wider">Visitor System</p>
+            <p className="text-blue-300 text-xs uppercase tracking-wider">Visitor System</p>
           </div>
         </div>
 
         <div className="flex items-center gap-4">
-          <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-slate-800/80 border border-slate-700/50 rounded-xl text-xs">
-            <UserIcon className="w-3.5 h-3.5 text-cyan-500" />
-            <span className="font-medium text-slate-300">{currentUser.username}</span>
-            <span className="px-1.5 py-0.5 bg-cyan-500/10 text-cyan-400 rounded-md text-[10px] uppercase font-bold">
+          <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-blue-900/50 border border-blue-800/40 rounded-xl text-xs text-white">
+            <UserIcon className="w-3.5 h-3.5 text-cyan-400" />
+            <span className="font-medium">{currentUser.username}</span>
+            <span className="px-1.5 py-0.5 bg-cyan-400/20 text-cyan-300 rounded-md text-[10px] uppercase font-bold">
               {currentUser.user_role}
             </span>
           </div>
 
           <button
             onClick={handleLogout}
-            className="flex items-center gap-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 hover:text-red-300 border border-red-500/20 px-4 py-2 rounded-xl text-sm font-medium transition-all"
+            className="flex items-center gap-2 bg-red-600/10 hover:bg-red-600/20 text-red-200 border border-red-800/20 px-4 py-2 rounded-xl text-sm font-medium transition-all"
           >
             <LogOut className="w-4 h-4" />
             <span>Sign Out</span>
@@ -95,8 +95,8 @@ export default function DashboardPage() {
       {/* Main Container */}
       <main className="max-w-7xl mx-auto px-6 py-8">
         
-        {/* Banner Card */}
-        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 border border-slate-800 p-8 shadow-xl mb-8">
+        {/* Dark Blue Banner Card */}
+        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-blue-950 via-slate-900 to-blue-950 border border-blue-900/40 p-8 shadow-lg mb-8 text-white">
           <div className="absolute right-0 top-0 translate-x-12 -translate-y-12 w-64 h-64 bg-cyan-500/5 rounded-full blur-3xl pointer-events-none" />
           
           <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
@@ -105,34 +105,34 @@ export default function DashboardPage() {
               <h2 className="text-3xl font-extrabold text-white tracking-tight mb-2">
                 {getRoleTitle(currentUser.user_role)}
               </h2>
-              <p className="text-slate-400 max-w-xl text-sm">
-                Welcome back, {currentUser.username}! You are signed in with the system role permission of <span className="text-slate-300 font-semibold">{currentUser.user_role}</span>.
+              <p className="text-slate-300 max-w-xl text-sm">
+                Welcome back, {currentUser.username}! You are signed in with the system role permission of <span className="text-white font-semibold">{currentUser.user_role}</span>.
               </p>
             </div>
             
             <div className="flex gap-4">
-              <div className="p-4 bg-slate-950/40 border border-slate-800/80 rounded-xl flex items-center gap-3">
-                <Database className="w-5 h-5 text-slate-400" />
+              <div className="p-4 bg-slate-950/40 border border-slate-800/40 rounded-xl flex items-center gap-3">
+                <Database className="w-5 h-5 text-slate-300" />
                 <div>
-                  <p className="text-[10px] text-slate-500 uppercase font-semibold">User ID</p>
-                  <p className="text-sm font-bold text-slate-200">#{currentUser.user_id}</p>
+                  <p className="text-[10px] text-slate-400 uppercase font-semibold">User ID</p>
+                  <p className="text-sm font-bold text-slate-100">#{currentUser.user_id}</p>
                 </div>
               </div>
-              <div className="p-4 bg-slate-950/40 border border-slate-800/80 rounded-xl flex items-center gap-3">
-                <Calendar className="w-5 h-5 text-slate-400" />
+              <div className="p-4 bg-slate-950/40 border border-slate-800/40 rounded-xl flex items-center gap-3">
+                <Calendar className="w-5 h-5 text-slate-300" />
                 <div>
-                  <p className="text-[10px] text-slate-500 uppercase font-semibold">System Date</p>
-                  <p className="text-sm font-bold text-slate-200">{new Date().toLocaleDateString()}</p>
+                  <p className="text-[10px] text-slate-400 uppercase font-semibold">System Date</p>
+                  <p className="text-sm font-bold text-slate-100">{new Date().toLocaleDateString()}</p>
                 </div>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Content Section Placeholder */}
-        <section className="bg-slate-900/30 border border-slate-800/80 rounded-2xl p-8 text-center text-slate-400 min-h-[300px] flex flex-col justify-center items-center">
-          <Shield className="w-12 h-12 text-slate-600 mb-4" />
-          <h3 className="text-lg font-bold text-slate-300 mb-1">Ready for Feature Deployment</h3>
+        {/* Light Gray Panel Container */}
+        <section className="bg-white border border-slate-200 rounded-2xl p-8 text-center text-slate-600 min-h-[300px] flex flex-col justify-center items-center shadow-sm">
+          <Shield className="w-12 h-12 text-slate-300 mb-4" />
+          <h3 className="text-lg font-bold text-slate-800 mb-1">Ready for Feature Deployment</h3>
           <p className="text-sm text-slate-500 max-w-md">
             This is the initial authenticated portal shell. Next phases will deploy core workflows, logging databases, and visual modules corresponding to your role permissions.
           </p>
