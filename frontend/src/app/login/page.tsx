@@ -60,8 +60,12 @@ export default function LoginPage() {
         
         {/* Header */}
         <div className="text-center mb-8">
-          <div className="inline-flex p-3 bg-gradient-to-tr from-blue-900 to-blue-950 border border-blue-800/80 rounded-xl mb-4 shadow-lg shadow-blue-900/10">
-            <Shield className="w-8 h-8 text-white animate-pulse" />
+          <div className="mb-4 inline-block">
+            <img
+              src="/digilogo.png"
+              alt="Digital Entry Logo"
+              className="h-16 w-auto object-contain filter drop-shadow-md"
+            />
           </div>
           <h1 className="text-2xl font-bold tracking-tight text-white mb-2">Digital Entry</h1>
           <p className="text-slate-400 text-sm">Visitor Management & Security Portal</p>

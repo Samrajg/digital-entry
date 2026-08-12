@@ -64,8 +64,12 @@ export default function DashboardPage() {
       {/* Dark Blue Header Navbar */}
       <header className="border-b border-blue-900/30 bg-blue-950 text-white sticky top-0 z-10 px-6 py-4 flex items-center justify-between shadow-md">
         <div className="flex items-center gap-3">
-          <div className="p-2 bg-blue-900 border border-blue-800 rounded-lg">
-            <Shield className="w-5 h-5 text-white" />
+          <div className="mr-1">
+            <img
+              src="/digilogo.png"
+              alt="Digital Entry Logo"
+              className="h-10 w-auto object-contain filter drop-shadow-sm"
+            />
           </div>
           <div>
             <h1 className="font-bold text-lg leading-tight">Digital Entry</h1>

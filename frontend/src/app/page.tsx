@@ -10,9 +10,13 @@ export default function Home() {
 
       <main className="relative z-10 w-full max-w-4xl flex flex-col items-center text-center space-y-10">
         
-        {/* Brand Icon (Dark Blue) */}
-        <div className="inline-flex p-4 bg-gradient-to-tr from-blue-900 to-blue-950 rounded-2xl shadow-xl shadow-blue-900/10">
-          <Shield className="w-12 h-12 text-white animate-pulse" />
+        {/* Brand Logo */}
+        <div className="mb-2">
+          <img
+            src="/digilogo.png"
+            alt="Digital Entry Logo"
+            className="h-20 w-auto object-contain filter drop-shadow-md"
+          />
         </div>
 
         {/* Title */}
