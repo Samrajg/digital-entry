@@ -5,7 +5,7 @@ from typing import List, Optional
 
 class QRCodeRepository:
     @staticmethod
-    def get_by_id(db: Session, qr_code_id: int) -> Optional[QRCode]:
+    def get_by_id(db: Session, qr_code_id: str) -> Optional[QRCode]:
         return db.query(QRCode).filter(QRCode.qr_code_id == qr_code_id).first()
 
     @staticmethod
@@ -23,10 +23,13 @@ class QRCodeRepository:
     @staticmethod
     def create(db: Session, gate_id: int, schema: QRCodeCreate, code_str: str, destination_url: str) -> QRCode:
         db_qr = QRCode(
+            qr_code_id=schema.qr_code_id,
             gate_id=gate_id,
             code=code_str,
             name=schema.name,
             destination_url=destination_url,
+            form_id=schema.form_id,
+            qr_type=schema.qr_type,
             is_active=True
         )
         db.add(db_qr)

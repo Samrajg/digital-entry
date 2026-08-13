@@ -31,3 +31,16 @@ apiClient.interceptors.request.use(
     return Promise.reject(error);
   }
 );
+
+apiClient.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response && error.response.status === 401) {
+      if (typeof window !== 'undefined') {
+        const event = new CustomEvent('sessionExpired');
+        window.dispatchEvent(event);
+      }
+    }
+    return Promise.reject(error);
+  }
+);

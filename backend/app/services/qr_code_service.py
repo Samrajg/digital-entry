@@ -5,7 +5,7 @@ import io
 import base64
 from app.repositories.qr_code_repository import QRCodeRepository
 from app.services.gate_service import GateService
-from app.schemas.qr_code import QRCodeCreate
+from app.schemas.qr_code import QRCodeCreate, QRCodeUpdate
 from app.models.qr_code import QRCode
 from typing import List, Optional
 
@@ -55,8 +55,9 @@ class QRCodeService:
             code_str = f"{base_code}-{counter}"
             counter += 1
 
-        # Generate a visitor entry URL that this QR points to
-        destination_url = f"/entry/{code_str}"
+        import os
+        frontend_url = os.getenv("FRONTEND_URL", "http://10.10.3.29:3000")
+        destination_url = f"{frontend_url}/entry/{code_str}"
 
         return QRCodeRepository.create(db, gate_id, schema, code_str, destination_url)
 
@@ -71,7 +72,7 @@ class QRCodeService:
         return QRCodeRepository.list_all(db)
 
     @staticmethod
-    def get_qr_code(db: Session, qr_code_id: int) -> QRCode:
+    def get_qr_code(db: Session, qr_code_id: str) -> QRCode:
         qr = QRCodeRepository.get_by_id(db, qr_code_id)
         if not qr:
             raise HTTPException(
@@ -81,7 +82,7 @@ class QRCodeService:
         return qr
 
     @staticmethod
-    def update_status(db: Session, qr_code_id: int, is_active: bool) -> QRCode:
+    def update_status(db: Session, qr_code_id: str, is_active: bool) -> QRCode:
         db_qr = QRCodeService.get_qr_code(db, qr_code_id)
         
         # If activating QR code, verify parent gate and campus are active
@@ -101,6 +102,14 @@ class QRCodeService:
         return QRCodeRepository.save(db, db_qr)
 
     @staticmethod
+    def update_qr_code(db: Session, qr_code_id: str, schema: QRCodeUpdate) -> QRCode:
+        db_qr = QRCodeService.get_qr_code(db, qr_code_id)
+        update_data = schema.model_dump(exclude_unset=True)
+        for key, value in update_data.items():
+            setattr(db_qr, key, value)
+        return QRCodeRepository.save(db, db_qr)
+
+    @staticmethod
     def build_response(qr: QRCode) -> dict:
         # Generate server-side base64 image representation
         qr_image = QRCodeService.generate_qr_base64(qr.destination_url)
@@ -114,6 +123,7 @@ class QRCodeService:
             "name": qr.name,
             "destination_url": qr.destination_url,
             "is_active": qr.is_active,
+            "qr_type": qr.qr_type,
             "qr_image_base64": qr_image,
             "created_at": qr.created_at,
             "updated_at": qr.updated_at

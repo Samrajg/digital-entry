@@ -15,8 +15,15 @@ export interface QRCode {
   updated_at: string;
 }
 
-export interface QRCodeCreateInput {
+export interface QRCodeCreate {
+  qr_code_id: string;
   name: string;
+  form_id: string;
+}
+
+export interface QRCodeUpdate {
+  name?: string;
+  form_id?: string;
 }
 
 export const qrCodeService = {
@@ -35,8 +42,13 @@ export const qrCodeService = {
     return response.data;
   },
 
-  async createQRCode(gateId: number, data: QRCodeCreateInput): Promise<QRCode> {
-    const response = await apiClient.post<QRCode>(`/api/gates/${gateId}/qr-codes`, data);
+  async createQRCode(gateId: number, data: QRCodeCreate): Promise<QRCode> {
+    const response = await apiClient.post(`/api/gates/${gateId}/qr-codes`, data);
+    return response.data;
+  },
+
+  async updateQRCode(qrCodeId: string, data: QRCodeUpdate): Promise<QRCode> {
+    const response = await apiClient.put(`/api/qr-codes/${qrCodeId}`, data);
     return response.data;
   },
 

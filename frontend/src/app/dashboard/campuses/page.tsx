@@ -24,6 +24,7 @@ import { gateService, Gate, GateDetail, QRCodeShort } from '@/services/gateServi
 import { qrCodeService, QRCode } from '@/services/qrCodeService';
 import { User } from '@/services/authService';
 import Navbar from '@/app/components/Navbar';
+import CreationProgressModal from '@/app/components/CreationProgressModal';
 
 type ViewMode = 'list' | 'details' | 'gate';
 
@@ -45,6 +46,7 @@ function CampusesPageContent() {
   const [selectedGate, setSelectedGate] = useState<GateDetail | null>(null);
   const [allGates, setAllGates] = useState<GateDetail[]>([]);
   const [allQRs, setAllQRs] = useState<QRCode[]>([]);
+  const [forms, setForms] = useState<any[]>([]);
 
   // Search query states
   const [gateSearchQuery, setGateSearchQuery] = useState('');
@@ -60,7 +62,36 @@ function CampusesPageContent() {
   const [gateForm, setGateForm] = useState({ name: '', code: '', description: '', location: '', campus_id: '' });
 
   const [showQRModal, setShowQRModal] = useState(false);
-  const [qrForm, setQrForm] = useState({ name: 'Primary Gate Access QR', gate_id: '' });
+  const [editingQR, setEditingQR] = useState<QRCode | QRCodeShort | null>(null);
+  const [qrForm, setQrForm] = useState({ qr_code_id: '', name: 'Primary Gate Access QR', gate_id: '', form_id: '', qr_type: 'visitor' });
+
+  // Progress Modal State
+  const [progressModal, setProgressModal] = useState({ isOpen: false, progress: 0, title: '', message: '' });
+
+  const simulateProgress = (title: string, message: string) => {
+    setProgressModal({ isOpen: true, progress: 0, title, message });
+    return new Promise<void>((resolve) => {
+      let current = 0;
+      const interval = setInterval(() => {
+        current += Math.floor(Math.random() * 15) + 5;
+        if (current >= 90) {
+          current = 90;
+          clearInterval(interval);
+          setProgressModal(prev => ({ ...prev, progress: current }));
+          resolve();
+        } else {
+          setProgressModal(prev => ({ ...prev, progress: current }));
+        }
+      }, 50);
+    });
+  };
+
+  const completeProgress = () => {
+    setProgressModal(prev => ({ ...prev, progress: 100 }));
+    setTimeout(() => {
+      setProgressModal({ isOpen: false, progress: 0, title: '', message: '' });
+    }, 400);
+  };
 
   // Security configuration
   const isAdmin = currentUser?.user_role === 'admin';
@@ -109,6 +140,11 @@ function CampusesPageContent() {
     } else {
       fetchCampuses();
     }
+    
+    // Fetch forms for QR code generation dropdown
+    import('@/services/apiClient').then(({ apiClient }) => {
+      apiClient.get('/api/forms/').then(res => setForms(res.data)).catch(console.error);
+    });
   }, [searchParams, currentUser]);
 
   // Flash alert helper
@@ -279,6 +315,7 @@ function CampusesPageContent() {
       return;
     }
 
+    await simulateProgress(editingGate ? 'Updating Gate' : 'Creating Gate', 'Registering gate with the system...');
     setIsLoading(true);
     try {
       if (editingGate) {
@@ -309,7 +346,9 @@ function CampusesPageContent() {
       if (activeTab === 'gates') {
         fetchAllGates();
       }
+      completeProgress();
     } catch (err: any) {
+      setProgressModal({ isOpen: false, progress: 0, title: '', message: '' });
       triggerAlert('error', err.response?.data?.detail || 'Failed to save gate.');
     } finally {
       setIsLoading(false);
@@ -346,20 +385,46 @@ function CampusesPageContent() {
       triggerAlert('error', 'QR Name is required.');
       return;
     }
+    if (!qrForm.form_id) {
+      triggerAlert('error', 'Form selection is required.');
+      return;
+    }
+    if (!qrForm.qr_code_id) {
+      triggerAlert('error', 'QR Code ID is required.');
+      return;
+    }
 
+    await simulateProgress(editingQR ? 'Updating QR Code' : 'Generating QR Code', 'Creating access pass...');
     setIsLoading(true);
     try {
-      const targetGateId = selectedGate ? selectedGate.gate_id : parseInt(qrForm.gate_id);
-      await qrCodeService.createQRCode(targetGateId, { name: qrForm.name });
-      triggerAlert('success', 'QR Code generated successfully.');
+      if (editingQR) {
+        await qrCodeService.updateQRCode(qrForm.qr_code_id, {
+          name: qrForm.name,
+          form_id: qrForm.form_id,
+          qr_type: qrForm.qr_type
+        });
+        triggerAlert('success', 'QR Code updated successfully.');
+      } else {
+        const targetGateId = selectedGate ? selectedGate.gate_id : parseInt(qrForm.gate_id);
+        await qrCodeService.createQRCode(targetGateId, {
+          qr_code_id: qrForm.qr_code_id,
+          name: qrForm.name,
+          form_id: qrForm.form_id,
+          qr_type: qrForm.qr_type
+        });
+        triggerAlert('success', 'QR Code generated successfully.');
+      }
       setShowQRModal(false);
+      setEditingQR(null);
       if (selectedGate) {
         fetchGateDetails(selectedGate.gate_id);
       }
       if (activeTab === 'qrs') {
         fetchAllQRs();
       }
+      completeProgress();
     } catch (err: any) {
+      setProgressModal({ isOpen: false, progress: 0, title: '', message: '' });
       triggerAlert('error', err.response?.data?.detail || 'Failed to generate QR Code.');
     } finally {
       setIsLoading(false);
@@ -380,6 +445,27 @@ function CampusesPageContent() {
       }
     } catch (err: any) {
       triggerAlert('error', err.response?.data?.detail || 'Failed to toggle QR status.');
+    }
+  };
+
+  const handleOpenQREdit = async (qrShort: QRCode | QRCodeShort) => {
+    if (!isAdmin) return;
+    setIsLoading(true);
+    try {
+      const qrDetail = await qrCodeService.getQRCodeDetails(qrShort.qr_code_id);
+      setEditingQR(qrDetail);
+      setQrForm({
+        qr_code_id: qrDetail.qr_code_id,
+        name: qrDetail.name,
+        gate_id: qrDetail.gate_id.toString(),
+        form_id: qrDetail.form_id || '',
+        qr_type: qrDetail.qr_type || 'visitor'
+      });
+      setShowQRModal(true);
+    } catch (err: any) {
+      triggerAlert('error', 'Failed to load QR code details.');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -793,8 +879,11 @@ function CampusesPageContent() {
                     onClick={() => {
                       if (!selectedGate.is_active) return;
                       setQrForm({ 
+                        qr_code_id: '',
                         name: `${selectedGate.name} Scan Pass`, 
-                        gate_id: selectedGate.gate_id.toString() 
+                        gate_id: selectedGate.gate_id.toString(),
+                        form_id: '',
+                        qr_type: 'visitor'
                       });
                       setShowQRModal(true);
                     }}
@@ -825,6 +914,7 @@ function CampusesPageContent() {
                         qrId={qrShort.qr_code_id}
                         isAdmin={isAdmin}
                         onToggleStatus={handleToggleQRStatus}
+                        onEditQR={handleOpenQREdit}
                         triggerAlert={triggerAlert}
                       />
                     );
@@ -988,9 +1078,13 @@ function CampusesPageContent() {
                   {isAdmin && (
                     <button
                       onClick={() => {
+                        setEditingQR(null);
                         setQrForm({ 
+                          qr_code_id: '',
                           name: 'Primary Gate Access QR', 
-                          gate_id: allGates[0]?.gate_id?.toString() || '' 
+                          gate_id: allGates[0]?.gate_id?.toString() || '',
+                          form_id: '',
+                          qr_type: 'visitor'
                         });
                         setShowQRModal(true);
                       }}
@@ -1031,6 +1125,7 @@ function CampusesPageContent() {
                       qrId={qr.qr_code_id}
                       isAdmin={isAdmin}
                       onToggleStatus={handleToggleQRStatus}
+                      onEditQR={handleOpenQREdit}
                       triggerAlert={triggerAlert}
                     />
                   ))}
@@ -1240,7 +1335,7 @@ function CampusesPageContent() {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fade-in">
           <div className="w-full max-w-md bg-white border border-slate-200 rounded-2xl shadow-2xl overflow-hidden animate-scale-up">
             <div className="px-6 py-4 bg-blue-950 border-b border-blue-900/30 text-white flex justify-between items-center">
-              <h3 className="font-bold text-base">Generate Scanning QR Pass</h3>
+              <h3 className="font-bold text-base">{editingQR ? 'Edit Scanning QR Pass' : 'Generate Scanning QR Pass'}</h3>
               <button 
                 onClick={() => setShowQRModal(false)} 
                 className="text-slate-400 hover:text-white transition-colors"
@@ -1275,6 +1370,56 @@ function CampusesPageContent() {
               )}
 
               <div>
+                <label className="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1.5">QR Code ID * (Unique)</label>
+                <input
+                  type="text"
+                  required
+                  value={qrForm.qr_code_id}
+                  onChange={(e) => setQrForm({ ...qrForm, qr_code_id: e.target.value })}
+                  placeholder="e.g. QR-001"
+                  disabled={!!editingQR}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-blue-500 focus:bg-white transition-colors uppercase font-mono disabled:opacity-50"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1.5">Pass Type *</label>
+                <select
+                  required
+                  value={qrForm.qr_type}
+                  onChange={(e) => setQrForm({ ...qrForm, qr_type: e.target.value })}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-blue-500 focus:bg-white transition-colors text-slate-700 font-medium"
+                >
+                  <option value="visitor">Visitor</option>
+                  <option value="vehicle">Vehicle</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1.5">Linked Form *</label>
+                {forms.length === 0 ? (
+                  <div className="p-3.5 bg-amber-50 border border-amber-200 text-amber-800 rounded-xl text-xs flex flex-col gap-1.5">
+                    <p className="font-bold flex items-center gap-1">⚠️ No Forms Configured</p>
+                    <p className="text-[11px] leading-relaxed text-amber-700">You must create at least one dynamic form before generating QR passes. Please go to the Forms tab to add a form first.</p>
+                  </div>
+                ) : (
+                  <select
+                    required
+                    value={qrForm.form_id}
+                    onChange={(e) => setQrForm({ ...qrForm, form_id: e.target.value })}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-blue-500 focus:bg-white transition-colors text-slate-700 font-medium"
+                  >
+                    <option value="" disabled>Select a form...</option>
+                    {forms.map((f) => (
+                      <option key={f.form_id} value={f.form_id.toString()}>
+                        {f.name}
+                      </option>
+                    ))}
+                  </select>
+                )}
+              </div>
+
+              <div>
                 <label className="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1.5">QR Identifier Name *</label>
                 <input
                   type="text"
@@ -1307,21 +1452,30 @@ function CampusesPageContent() {
           </div>
         </div>
       )}
+
+      <CreationProgressModal 
+        isOpen={progressModal.isOpen} 
+        progress={progressModal.progress} 
+        title={progressModal.title} 
+        message={progressModal.message} 
+      />
     </div>
   );
 }
 
 // -------------------- DYNAMIC CHILD COMPONENT: QR CODE CARD --------------------
 interface QRCodeCardProps {
-  qrId: number;
+  qrId: string;
   isAdmin: boolean;
   onToggleStatus: (qr: QRCode) => Promise<void>;
+  onEditQR?: (qr: QRCode) => void;
   triggerAlert: (type: 'success' | 'error', message: string) => void;
 }
 
-function QRCodeCard({ qrId, isAdmin, onToggleStatus, triggerAlert }: QRCodeCardProps) {
-  const [qrDetail, setQrDetail] = useState<QRCode | null>(null);
+function QRCodeCard({ qrId, isAdmin, onToggleStatus, onEditQR, triggerAlert }: QRCodeCardProps) {
+  const [qrDetail, setQrDetail] = useState<any>(null);
   const [localLoading, setLocalLoading] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
 
   const fetchQR = async () => {
     setLocalLoading(true);
@@ -1365,24 +1519,45 @@ function QRCodeCard({ qrId, isAdmin, onToggleStatus, triggerAlert }: QRCodeCardP
       <div className="w-full flex justify-between items-start mb-4">
         <div className="text-left">
           <h4 className="font-bold text-slate-800 text-sm max-w-[140px] truncate">{qrDetail.name}</h4>
-          <span className="font-mono text-[10px] text-slate-500">{qrDetail.code}</span>
+          <div className="flex flex-col gap-1 mt-1">
+            <span className="font-mono text-[10px] text-slate-500">{qrDetail.code}</span>
+            <span className={`inline-flex items-center px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider w-fit ${
+              qrDetail.qr_type === 'vehicle' ? 'bg-indigo-50 text-indigo-700 border border-indigo-200' : 'bg-cyan-50 text-cyan-700 border border-cyan-200'
+            }`}>
+              {qrDetail.qr_type === 'vehicle' ? 'Vehicle Pass' : 'Visitor Pass'}
+            </span>
+          </div>
         </div>
 
-        <button
-          onClick={() => onToggleStatus(qrDetail).then(() => fetchQR())}
-          disabled={!isAdmin}
-          className={`px-2 py-0.5 text-[10px] font-bold rounded-full border ${
-            qrDetail.is_active 
-              ? 'bg-emerald-50 border-emerald-200 text-emerald-700' 
-              : 'bg-red-50 border-red-200 text-red-700'
-          } disabled:opacity-75`}
-        >
-          {qrDetail.is_active ? 'Active' : 'Inactive'}
-        </button>
+        <div className="flex gap-2">
+          {isAdmin && onEditQR && (
+            <button
+              onClick={() => onEditQR(qrDetail)}
+              className="p-1 text-slate-400 hover:text-blue-600 transition-colors"
+            >
+              <Edit className="w-3.5 h-3.5" />
+            </button>
+          )}
+          <button
+            onClick={() => onToggleStatus(qrDetail).then(() => fetchQR())}
+            disabled={!isAdmin}
+            className={`px-2 py-0.5 text-[10px] font-bold rounded-full border ${
+              qrDetail.is_active 
+                ? 'bg-emerald-50 border-emerald-200 text-emerald-700' 
+                : 'bg-red-50 border-red-200 text-red-700'
+            } disabled:opacity-75`}
+          >
+            {qrDetail.is_active ? 'Active' : 'Inactive'}
+          </button>
+        </div>
       </div>
 
       {/* Base64 Image Render */}
-      <div className="bg-slate-100 p-4 rounded-xl border border-slate-200 mb-4 select-none relative group">
+      <div 
+        className="bg-slate-100 p-4 rounded-xl border border-slate-200 mb-4 select-none relative group cursor-pointer hover:bg-slate-200 transition-colors"
+        onClick={() => setIsFullscreen(true)}
+        title="Click to enlarge"
+      >
         {qrDetail.qr_image_base64 ? (
           <img 
             src={`data:image/png;base64,${qrDetail.qr_image_base64}`} 
@@ -1407,6 +1582,33 @@ function QRCodeCard({ qrId, isAdmin, onToggleStatus, triggerAlert }: QRCodeCardP
         <Download className="w-3.5 h-3.5" />
         <span>Download QR Code</span>
       </button>
+
+      {/* Fullscreen QR Modal */}
+      {isFullscreen && (
+        <div 
+          className="fixed inset-0 z-[60] bg-black/90 flex flex-col items-center justify-center p-4 animate-fade-in"
+          onClick={() => setIsFullscreen(false)}
+        >
+          <div className="bg-white p-8 rounded-3xl" onClick={(e) => e.stopPropagation()}>
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-xl font-bold">{qrDetail.name}</h3>
+              <button onClick={() => setIsFullscreen(false)} className="text-slate-400 hover:text-slate-800">✕</button>
+            </div>
+            {qrDetail.qr_image_base64 ? (
+              <img 
+                src={`data:image/png;base64,${qrDetail.qr_image_base64}`} 
+                alt={qrDetail.code} 
+                className="w-full max-w-md h-auto object-contain"
+              />
+            ) : (
+              <div className="w-full max-w-md aspect-square flex items-center justify-center bg-slate-100">
+                <QrCode className="w-16 h-16 text-slate-300" />
+              </div>
+            )}
+            <p className="text-center mt-6 font-mono text-sm text-slate-500">{qrDetail.code}</p>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

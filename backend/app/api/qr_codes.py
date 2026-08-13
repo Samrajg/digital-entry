@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, status
 from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.core.security import require_roles
-from app.schemas.qr_code import QRCodeCreate, QRCodeStatusUpdate, QRCodeResponse
+from app.schemas.qr_code import QRCodeCreate, QRCodeStatusUpdate, QRCodeUpdate, QRCodeResponse
 from app.services.qr_code_service import QRCodeService
 from typing import List
 
@@ -42,16 +42,26 @@ def list_all_qr_codes(
 
 @router.get("/qr-codes/{qr_code_id}", response_model=QRCodeResponse)
 def get_qr_code(
-    qr_code_id: int,
+    qr_code_id: str,
     db: Session = Depends(get_db),
     current_user = Depends(require_roles(READ_ROLES))
 ):
     qr = QRCodeService.get_qr_code(db, qr_code_id)
     return QRCodeService.build_response(qr)
 
+@router.put("/qr-codes/{qr_code_id}", response_model=QRCodeResponse)
+def update_qr_code(
+    qr_code_id: str,
+    schema: QRCodeUpdate,
+    db: Session = Depends(get_db),
+    current_user = Depends(require_roles(WRITE_ROLES))
+):
+    qr = QRCodeService.update_qr_code(db, qr_code_id, schema)
+    return QRCodeService.build_response(qr)
+
 @router.patch("/qr-codes/{qr_code_id}/status", response_model=QRCodeResponse)
 def update_qr_status(
-    qr_code_id: int,
+    qr_code_id: str,
     schema: QRCodeStatusUpdate,
     db: Session = Depends(get_db),
     current_user = Depends(require_roles(WRITE_ROLES))

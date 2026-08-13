@@ -1,9 +1,9 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
-import { Shield, LogOut, User as UserIcon, Building2, DoorOpen, QrCode, LayoutDashboard } from 'lucide-react';
+import { Shield, LogOut, User as UserIcon, Building2, DoorOpen, QrCode, LayoutDashboard, Users, Truck } from 'lucide-react';
 import { User } from '@/services/authService';
 
 interface NavbarProps {
@@ -14,7 +14,14 @@ export default function Navbar({ currentUser }: NavbarProps) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  
+  const [sessionExpired, setSessionExpired] = useState(false);
+
+  useEffect(() => {
+    const handleSessionExpired = () => setSessionExpired(true);
+    window.addEventListener('sessionExpired', handleSessionExpired);
+    return () => window.removeEventListener('sessionExpired', handleSessionExpired);
+  }, []);
+
   // Safe extraction of query parameters
   const currentTab = searchParams ? searchParams.get('tab') : null;
 
@@ -33,6 +40,12 @@ export default function Navbar({ currentUser }: NavbarProps) {
       active: pathname === '/dashboard',
     },
     {
+      name: 'Forms',
+      href: '/dashboard/forms',
+      icon: LayoutDashboard, // Will import FileText next if needed, using LayoutDashboard temporarily or we can just import FileText
+      active: pathname.startsWith('/dashboard/forms'),
+    },
+    {
       name: 'Campuses',
       href: '/dashboard/campuses?tab=campuses',
       icon: Building2,
@@ -49,6 +62,24 @@ export default function Navbar({ currentUser }: NavbarProps) {
       href: '/dashboard/campuses?tab=qrs',
       icon: QrCode,
       active: pathname.startsWith('/dashboard/campuses') && currentTab === 'qrs',
+    },
+    {
+      name: 'Visitors',
+      href: '/dashboard/visitors',
+      icon: Users,
+      active: pathname.startsWith('/dashboard/visitors'),
+    },
+    {
+      name: 'Vehicles',
+      href: '/dashboard/vehicles',
+      icon: Truck,
+      active: pathname.startsWith('/dashboard/vehicles'),
+    },
+    {
+      name: 'Security',
+      href: '/dashboard/security',
+      icon: Shield,
+      active: pathname.startsWith('/dashboard/security'),
     },
   ];
 
@@ -114,6 +145,27 @@ export default function Navbar({ currentUser }: NavbarProps) {
           <span className="hidden sm:inline">Sign Out</span>
         </button>
       </div>
+
+      {sessionExpired && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/80 backdrop-blur-sm animate-fade-in p-4">
+          <div className="bg-white border border-red-200 rounded-3xl shadow-2xl p-8 max-w-md w-full flex flex-col items-center text-center animate-scale-up">
+            <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mb-6">
+              <LogOut className="w-8 h-8 text-red-600" />
+            </div>
+            <h2 className="text-2xl font-black text-slate-800 mb-2">Session Expired</h2>
+            <p className="text-slate-500 mb-8 font-medium text-sm leading-relaxed">
+              Your security session has expired or is invalid. For your protection, please log out and authenticate again to continue.
+            </p>
+            <button
+              onClick={handleLogout}
+              className="w-full bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 text-white font-bold py-3.5 px-6 rounded-xl shadow-lg shadow-red-600/20 active:scale-95 transition-all flex items-center justify-center gap-2 uppercase tracking-wide text-sm"
+            >
+              <LogOut className="w-5 h-5" />
+              <span>Secure Logout</span>
+            </button>
+          </div>
+        </div>
+      )}
     </header>
   );
 }
