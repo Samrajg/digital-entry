@@ -6,3 +6,4 @@ from app.models.entry import Entry
 from app.models.dynamic_form import DynamicForm
 from app.models.dynamic_response import DynamicResponse
 from app.models.security import Security
+from app.models.schedule import ScheduledVisit

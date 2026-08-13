@@ -76,6 +76,28 @@ class EntryService:
         db.commit()
         db.refresh(db_response)
         
+        if entry_data.schedule_pass:
+            from app.models.schedule import ScheduledVisit
+            schedule = db.query(ScheduledVisit).filter(ScheduledVisit.qr_pass_value == entry_data.schedule_pass).first()
+            if schedule and schedule.status == "PENDING":
+                schedule.status = "CHECKED_IN"
+                db.commit()
+        
+        try:
+            gate_name = qr.gate.name if qr.gate else "Unknown Gate"
+            campus_name = qr.gate.campus.name if qr.gate and qr.gate.campus else "Unknown Campus"
+            entity_type = "Vehicle" if qr.qr_type == 'vehicle' else "Visitor"
+            details = f"{entity_type} checked in at {gate_name}, {campus_name}"
+            from app.services.notification_service import notification_manager
+            notification_manager.broadcast_sync({
+                "type": "NEW_ENTRY",
+                "entity_type": entity_type,
+                "details": details,
+                "timestamp": db_response.created_at.isoformat()
+            })
+        except Exception as e:
+            print("Failed to broadcast notification:", e)
+        
         return {
             "response_id": db_response.vehicle_id if qr.qr_type == 'vehicle' else db_response.visitor_id,
             "form_id": db_response.form_id,

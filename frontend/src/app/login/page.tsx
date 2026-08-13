@@ -29,8 +29,11 @@ export default function LoginPage() {
 
     try {
       const response = await authService.login(username, pin);
-      // Store user state
+      // Store user state and token
       localStorage.setItem('user', JSON.stringify(response.user));
+      if (response.access_token) {
+        localStorage.setItem('access_token', response.access_token);
+      }
       // Redirect to unified dashboard
       router.push('/dashboard');
     } catch (err: any) {
@@ -45,10 +48,10 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen w-full flex items-center justify-center bg-gradient-to-br from-slate-50 via-white to-slate-100 p-4 font-sans selection:bg-blue-600 selection:text-white relative overflow-hidden">
+    <div className="min-h-screen w-full flex items-center justify-center bg-gradient-to-br from-slate-50 via-white to-slate-100 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 p-4 font-sans selection:bg-blue-600 selection:text-white relative overflow-hidden transition-colors duration-300">
       {/* Background ambient glows */}
-      <div className="absolute top-1/4 left-1/4 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-blue-500/5 rounded-full blur-3xl pointer-events-none" />
-      <div className="absolute bottom-1/4 right-1/4 translate-x-1/2 translate-y-1/2 w-96 h-96 bg-cyan-500/5 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute top-1/4 left-1/4 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-blue-500/5 dark:bg-blue-600/10 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute bottom-1/4 right-1/4 translate-x-1/2 translate-y-1/2 w-96 h-96 bg-cyan-500/5 dark:bg-cyan-600/10 rounded-full blur-3xl pointer-events-none" />
 
       {/* TODO: Before Production:
           - PINs must be hashed and verified.

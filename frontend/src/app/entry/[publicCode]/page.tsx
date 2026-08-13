@@ -37,6 +37,10 @@ export default function PublicEntryPage() {
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
   const [passData, setPassData] = useState<any>(null);
+  
+  const [schedulePass, setSchedulePass] = useState('');
+  const [scheduleApplied, setScheduleApplied] = useState(false);
+  const [scheduleLoading, setScheduleLoading] = useState(false);
 
   const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
@@ -75,6 +79,36 @@ export default function PublicEntryPage() {
     setFormData(prev => ({ ...prev, [id]: value }));
   };
 
+  const applySchedulePass = async () => {
+    if (!schedulePass) return;
+    setScheduleLoading(true);
+    try {
+      const res = await fetch(`${API_URL}/api/public/schedule/${schedulePass}`);
+      if (!res.ok) throw new Error('Invalid or expired pass code');
+      const data = await res.json();
+      
+      // Try to map schedule fields to form fields
+      setFormData(prev => {
+        const newData = { ...prev };
+        context?.form_schema?.forEach(f => {
+          if (f.label.toLowerCase().includes('name') && data.visitor_name) {
+            newData[f.id] = data.visitor_name;
+          }
+          if (f.label.toLowerCase().includes('purpose') && data.purpose) {
+            newData[f.id] = data.purpose;
+          }
+        });
+        return newData;
+      });
+      setScheduleApplied(true);
+      alert('Pre-registered data applied!');
+    } catch (err: any) {
+      alert(err.message);
+    } finally {
+      setScheduleLoading(false);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
@@ -88,7 +122,8 @@ export default function PublicEntryPage() {
         },
         body: JSON.stringify({ 
           security_pin: securityPin,
-          response_data: formData 
+          response_data: formData,
+          schedule_pass: scheduleApplied ? schedulePass : undefined
         }),
       });
 
@@ -205,6 +240,30 @@ export default function PublicEntryPage() {
                 {error}
               </div>
             )}
+            
+            <div className="bg-indigo-50 border border-indigo-100 rounded-xl p-4 mb-4">
+              <label className="block text-xs font-bold text-indigo-800 uppercase tracking-wider mb-2">
+                Have a Pre-Registered Pass Code?
+              </label>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={schedulePass}
+                  onChange={(e) => setSchedulePass(e.target.value)}
+                  disabled={scheduleApplied}
+                  placeholder="Enter Pass Code"
+                  className="flex-grow bg-white border border-indigo-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-500 disabled:opacity-50"
+                />
+                <button
+                  type="button"
+                  onClick={applySchedulePass}
+                  disabled={scheduleApplied || !schedulePass || scheduleLoading}
+                  className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-semibold hover:bg-indigo-700 disabled:opacity-50"
+                >
+                  {scheduleLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : scheduleApplied ? 'Applied' : 'Apply'}
+                </button>
+              </div>
+            </div>
 
             {context?.form_schema?.map(field => (
               <div key={field.id} className="space-y-1.5">

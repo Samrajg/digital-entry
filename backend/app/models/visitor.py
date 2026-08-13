@@ -14,6 +14,7 @@ class Visitor(Base):
     security_id = Column(Integer, ForeignKey("security.security_id", ondelete="SET NULL"), nullable=True, index=True)
     form_data = Column(JSONB, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    checked_out_at = Column(DateTime, nullable=True)
 
     qr_code = relationship("QRCode")
     form = relationship("DynamicForm")

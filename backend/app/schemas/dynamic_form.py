@@ -43,6 +43,7 @@ class DynamicFormResponse(BaseModel):
 class DynamicResponseSubmit(BaseModel):
     security_pin: str = Field(..., min_length=4, max_length=4)
     response_data: Dict[str, Any]
+    schedule_pass: Optional[str] = None
 
 class DynamicResponseView(BaseModel):
     response_id: int

@@ -47,8 +47,8 @@ class AuthService:
                 detail="Invalid username or PIN"
             )
             
-        # Check if PIN matches (currently stored in plain-text for this prototype)
-        if user.user_pin != user_pin:
+        from app.core.security import verify_password
+        if not verify_password(user_pin, user.user_pin):
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Invalid username or PIN"
