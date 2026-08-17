@@ -109,6 +109,7 @@ export default function Navbar({ currentUser }: NavbarProps) {
 
   const standaloneItems = [
     { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard, active: pathname === '/dashboard' },
+    { name: currentUser?.user_role === 'security' ? "Today's Expected" : 'Appointments', href: '/dashboard/appointments', icon: CalendarDays, active: pathname.startsWith('/dashboard/appointments') },
     { name: 'Visitors', href: '/dashboard/visitors', icon: Users, active: pathname.startsWith('/dashboard/visitors') },
     { name: 'Vehicles', href: '/dashboard/vehicles', icon: Truck, active: pathname.startsWith('/dashboard/vehicles') },
   ];

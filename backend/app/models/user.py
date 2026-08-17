@@ -14,5 +14,5 @@ class User(Base):
     user_id = Column(Integer, primary_key=True, index=True, autoincrement=True)
     username = Column(String, unique=True, index=True, nullable=False)
     user_pin = Column(String, nullable=False)
-    user_role = Column(String, nullable=False)  # Allowed: admin, security, supervisor, manager
+    user_role = Column(String, nullable=False)  # admin, security, supervisor, manager, employee
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)

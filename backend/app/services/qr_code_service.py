@@ -57,7 +57,10 @@ class QRCodeService:
 
         import os
         frontend_url = os.getenv("FRONTEND_URL", "http://10.10.3.29:3000")
-        destination_url = f"{frontend_url}/entry/{code_str}"
+        if getattr(schema, 'qr_type', None) in ["exit_visitor", "exit_vehicle"]:
+            destination_url = f"{frontend_url}/exit/{code_str}"
+        else:
+            destination_url = f"{frontend_url}/entry/{code_str}"
 
         return QRCodeRepository.create(db, gate_id, schema, code_str, destination_url)
 

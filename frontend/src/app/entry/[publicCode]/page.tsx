@@ -186,9 +186,21 @@ export default function PublicEntryPage() {
           <div className="bg-slate-50 rounded-2xl border border-slate-200 p-6 mb-8 text-left space-y-4">
             <div>
               <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Pass ID</p>
-              <p className="font-mono font-bold text-slate-700 bg-white border border-slate-200 py-1.5 px-3 rounded-lg inline-block">
-                #{passData.response_id.toString().padStart(6, '0')}
-              </p>
+              <div className="flex items-center gap-2">
+                <p className="font-mono font-bold text-slate-700 bg-white border border-slate-200 py-1.5 px-3 rounded-lg inline-block">
+                  #{passData.response_id.toString().padStart(6, '0')}
+                </p>
+                <button
+                  onClick={() => {
+                    navigator.clipboard.writeText(passData.response_id.toString().padStart(6, '0'));
+                    alert('Pass ID copied to clipboard!');
+                  }}
+                  className="text-xs bg-slate-200 hover:bg-slate-300 text-slate-700 px-3 py-1.5 rounded-lg font-bold transition-colors"
+                >
+                  Copy
+                </button>
+              </div>
+              <p className="text-xs text-amber-600 font-bold mt-2 bg-amber-50 inline-block px-2 py-1 rounded">Save your Pass ID — you'll need it when exiting.</p>
             </div>
             
             <div className="pt-4 border-t border-slate-200">

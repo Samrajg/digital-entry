@@ -8,7 +8,7 @@ class QRCodeBase(BaseModel):
 
 class QRCodeCreate(QRCodeBase):
     qr_code_id: str = Field(..., min_length=1, max_length=100)
-    form_id: str = Field(..., min_length=1, max_length=100)
+    form_id: Optional[str] = None
 
 class QRCodeStatusUpdate(BaseModel):
     is_active: bool

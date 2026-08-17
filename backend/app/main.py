@@ -41,6 +41,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+from app.api.appointments import router as appointments_router
+
 # Register API routers
 app.include_router(auth_router, prefix="/api/auth", tags=["Authentication"])
 app.include_router(public_router, prefix="/api/public", tags=["Public"])
@@ -57,6 +59,7 @@ app.include_router(visitors_router, prefix="/api/visitors", tags=["Visitors"], d
 app.include_router(vehicles_router, prefix="/api/vehicles", tags=["Vehicles"], dependencies=protected_dependencies)
 app.include_router(analytics_router, prefix="/api/analytics", tags=["Analytics"], dependencies=protected_dependencies)
 app.include_router(schedules_router, prefix="/api/schedules", tags=["Schedules"], dependencies=protected_dependencies)
+app.include_router(appointments_router, prefix="/api/appointments", tags=["Appointments"], dependencies=protected_dependencies)
 
 @app.get("/")
 def read_root():

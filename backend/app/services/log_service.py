@@ -1,4 +1,4 @@
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, aliased
 from sqlalchemy import desc, asc
 from app.models.visitor import Visitor
 from app.models.vehicle import Vehicle
@@ -32,11 +32,13 @@ class LogService:
         sort_order: Optional[str] = 'desc',
         active_only: bool = False
     ):
-        query = db.query(Visitor, QRCode, Gate, Campus, Security, DynamicForm)\
+        CheckoutSecurity = aliased(Security)
+        query = db.query(Visitor, QRCode, Gate, Campus, Security, DynamicForm, CheckoutSecurity)\
             .join(QRCode, Visitor.qr_code_id == QRCode.qr_code_id)\
             .join(Gate, Visitor.gate_id == Gate.gate_id)\
             .join(Campus, Gate.campus_id == Campus.campus_id)\
             .outerjoin(Security, Visitor.security_id == Security.security_id)\
+            .outerjoin(CheckoutSecurity, Visitor.checkout_security_id == CheckoutSecurity.security_id)\
             .outerjoin(DynamicForm, Visitor.form_id == DynamicForm.form_id)
 
         # Filters
@@ -72,7 +74,7 @@ class LogService:
         results = query.offset(skip).limit(limit).all()
         
         response = []
-        for visitor, qr, gate, campus, sec, form in results:
+        for visitor, qr, gate, campus, sec, form, checkout_sec in results:
             response.append({
                 "id": visitor.visitor_id,
                 "form_id": visitor.form_id,
@@ -81,6 +83,7 @@ class LogService:
                 "gate_name": gate.name,
                 "campus_name": campus.name,
                 "security_name": sec.security_name if sec else "Unknown",
+                "checkout_security_name": checkout_sec.security_name if checkout_sec else None,
                 "form_data": LogService._format_form_data(visitor.form_data, form),
                 "created_at": visitor.created_at,
                 "checked_out_at": visitor.checked_out_at
@@ -101,11 +104,13 @@ class LogService:
         sort_order: Optional[str] = 'desc',
         active_only: bool = False
     ):
-        query = db.query(Vehicle, QRCode, Gate, Campus, Security, DynamicForm)\
+        CheckoutSecurity = aliased(Security)
+        query = db.query(Vehicle, QRCode, Gate, Campus, Security, DynamicForm, CheckoutSecurity)\
             .join(QRCode, Vehicle.qr_code_id == QRCode.qr_code_id)\
             .join(Gate, Vehicle.gate_id == Gate.gate_id)\
             .join(Campus, Gate.campus_id == Campus.campus_id)\
             .outerjoin(Security, Vehicle.security_id == Security.security_id)\
+            .outerjoin(CheckoutSecurity, Vehicle.checkout_security_id == CheckoutSecurity.security_id)\
             .outerjoin(DynamicForm, Vehicle.form_id == DynamicForm.form_id)
 
         # Filters
@@ -141,7 +146,7 @@ class LogService:
         results = query.offset(skip).limit(limit).all()
         
         response = []
-        for vehicle, qr, gate, campus, sec, form in results:
+        for vehicle, qr, gate, campus, sec, form, checkout_sec in results:
             response.append({
                 "id": vehicle.vehicle_id,
                 "form_id": vehicle.form_id,
@@ -150,6 +155,7 @@ class LogService:
                 "gate_name": gate.name,
                 "campus_name": campus.name,
                 "security_name": sec.security_name if sec else "Unknown",
+                "checkout_security_name": checkout_sec.security_name if checkout_sec else None,
                 "form_data": LogService._format_form_data(vehicle.form_data, form),
                 "created_at": vehicle.created_at,
                 "checked_out_at": vehicle.checked_out_at

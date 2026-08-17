@@ -32,3 +32,16 @@ class PublicContextResponse(BaseModel):
     form_id: Optional[str] = None
     form_name: Optional[str] = None
     form_schema: Optional[List[FormFieldSchema]] = None
+    qr_type: Optional[str] = None
+
+class CheckoutSubmit(BaseModel):
+    pass_id: int
+    security_pin: str
+
+class CheckoutResponse(BaseModel):
+    message: str
+    pass_id: int
+    checked_out_at: datetime
+    visit_duration_minutes: int
+    campus_name: str
+    gate_name: str

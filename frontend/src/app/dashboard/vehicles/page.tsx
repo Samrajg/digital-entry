@@ -1,7 +1,9 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Truck, Loader2, Download, Search, ChevronLeft, ChevronRight, ArrowUpDown } from 'lucide-react';
+import { Truck, Loader2, Download, Search, ChevronLeft, ChevronRight, ArrowUpDown, FileText, FileSpreadsheet, ChevronDown } from 'lucide-react';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 import Navbar from '@/app/components/Navbar';
 import { useRouter } from 'next/navigation';
 import { apiClient } from '@/services/apiClient';
@@ -129,6 +131,37 @@ export default function VehiclesPage() {
     document.body.removeChild(link);
   };
 
+  const exportPDF = () => {
+    if (vehicles.length === 0) return;
+    const doc = new jsPDF();
+    doc.text(`Vehicle Logs - ${new Date().toLocaleDateString()}`, 14, 15);
+    
+    const tableColumn = ["Date/Time", "Campus", "Gate", "Authorized By", "Details"];
+    const tableRows = vehicles.map(v => {
+      const dateStr = new Date(v.created_at).toLocaleString();
+      const formDetails = Object.entries(v.form_data).map(([k, val]) => `${k}: ${val}`).join('\n');
+      return [
+        dateStr,
+        v.campus_name,
+        v.gate_name,
+        v.security_name,
+        formDetails
+      ];
+    });
+
+    autoTable(doc, {
+      head: [tableColumn],
+      body: tableRows,
+      startY: 20,
+      styles: { fontSize: 8 },
+      columnStyles: {
+        4: { cellWidth: 70 }
+      }
+    });
+
+    doc.save(`vehicle_logs_${new Date().toISOString().split('T')[0]}.pdf`);
+  };
+
   const totalPages = Math.ceil(total / limit);
   const currentPage = Math.floor(skip / limit) + 1;
 
@@ -145,13 +178,24 @@ export default function VehiclesPage() {
               <h3 className="font-bold text-slate-800 dark:text-slate-100 text-lg">Vehicle Audit Logs</h3>
               <p className="text-slate-500 dark:text-slate-400 text-xs mt-1">Total records: {total}</p>
             </div>
-            <button
-              onClick={exportCSV}
-              disabled={vehicles.length === 0}
-              className="flex items-center gap-2 px-4 py-2 bg-slate-900 dark:bg-slate-100 hover:bg-slate-800 dark:hover:bg-white text-white dark:text-slate-900 rounded-xl text-sm font-semibold transition-colors disabled:opacity-50 w-full sm:w-auto justify-center"
-            >
-              <Download className="w-4 h-4" /> Export CSV
-            </button>
+            <div className="relative group w-full sm:w-auto">
+              <button
+                disabled={vehicles.length === 0}
+                className="flex items-center gap-2 px-4 py-2 bg-slate-900 dark:bg-slate-100 hover:bg-slate-800 dark:hover:bg-white text-white dark:text-slate-900 rounded-xl text-sm font-semibold transition-colors disabled:opacity-50 w-full sm:w-auto justify-center"
+              >
+                <Download className="w-4 h-4" /> Export Report <ChevronDown className="w-4 h-4 ml-1 opacity-70 transition-transform group-hover:rotate-180" />
+              </button>
+              <div className="absolute right-0 top-full pt-1 w-40 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
+                <div className="bg-white dark:bg-slate-900 rounded-xl shadow-xl border border-slate-200 dark:border-slate-800 flex flex-col overflow-hidden">
+                  <button onClick={exportCSV} className="flex items-center gap-3 px-4 py-3 text-sm font-bold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">
+                    <FileSpreadsheet className="w-4 h-4 text-green-600" /> CSV
+                  </button>
+                  <button onClick={exportPDF} className="flex items-center gap-3 px-4 py-3 text-sm font-bold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors border-t border-slate-100 dark:border-slate-800">
+                    <FileText className="w-4 h-4 text-red-600" /> PDF
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
 
           {/* Filter Toolbar */}
@@ -242,9 +286,10 @@ export default function VehiclesPage() {
                         <div className="flex items-center gap-1">Entry Point <ArrowUpDown className="w-3 h-3" /></div>
                       </th>
                       <th className="px-6 py-4 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors" onClick={() => handleSort('security_name')}>
-                        <div className="flex items-center justify-end gap-1">Authorized By <ArrowUpDown className="w-3 h-3" /></div>
+                        <div className="flex items-center justify-end gap-1">Entry / Exit Guards <ArrowUpDown className="w-3 h-3" /></div>
                       </th>
-                      <th className="px-6 py-4 text-right">Status</th>
+                      <th className="px-6 py-4">Duration</th>
+                      <th className="px-6 py-4 text-right">Status / Check-out</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 dark:divide-slate-800/50 text-sm">
@@ -265,8 +310,20 @@ export default function VehiclesPage() {
                           <p className="font-semibold text-slate-800 dark:text-slate-200">{log.campus_name}</p>
                           <p className="text-xs text-slate-500 dark:text-slate-400">{log.gate_name} ({log.qr_name})</p>
                         </td>
-                        <td className="px-6 py-4 text-right font-medium text-slate-700 dark:text-slate-300">
-                          {log.security_name}
+                        <td className="px-6 py-4 text-right">
+                          <div className="font-medium text-slate-700 dark:text-slate-300">In: {log.security_name}</div>
+                          {log.checkout_security_name && (
+                            <div className="text-xs text-slate-500 mt-1">Out: {log.checkout_security_name}</div>
+                          )}
+                        </td>
+                        <td className="px-6 py-4">
+                          {log.checked_out_at ? (
+                            <span className="text-xs font-medium text-slate-600 dark:text-slate-400">
+                              {Math.floor((new Date(log.checked_out_at).getTime() - new Date(log.created_at).getTime()) / 60000)} mins
+                            </span>
+                          ) : (
+                            <span className="text-xs text-slate-400 italic">--</span>
+                          )}
                         </td>
                         <td className="px-6 py-4 text-right">
                           {log.checked_out_at ? (
@@ -317,7 +374,10 @@ export default function VehiclesPage() {
                       </div>
                       <div className="text-right">
                         <div className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Authorized By</div>
-                        <div className="font-semibold text-slate-800 dark:text-slate-200 text-sm">{log.security_name}</div>
+                        <div className="font-semibold text-slate-800 dark:text-slate-200 text-sm">In: {log.security_name}</div>
+                        {log.checkout_security_name && (
+                          <div className="text-xs text-slate-500 mt-0.5">Out: {log.checkout_security_name}</div>
+                        )}
                       </div>
                     </div>
                     
@@ -348,7 +408,10 @@ export default function VehiclesPage() {
                           {checkingOutId === log.id ? '...' : 'Check Out'}
                         </button>
                       ) : (
-                        <span className="text-slate-500 font-medium">Out: {new Date(log.checked_out_at).toLocaleTimeString()}</span>
+                        <div className="text-right">
+                          <span className="text-[10px] text-slate-500 font-medium block">Out: {new Date(log.checked_out_at).toLocaleTimeString()}</span>
+                          <span className="text-[10px] text-slate-400 font-medium block">{Math.floor((new Date(log.checked_out_at).getTime() - new Date(log.created_at).getTime()) / 60000)} mins</span>
+                        </div>
                       )}
                     </div>
                   </div>

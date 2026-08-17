@@ -1387,37 +1387,44 @@ function CampusesPageContent() {
                 <select
                   required
                   value={qrForm.qr_type}
-                  onChange={(e) => setQrForm({ ...qrForm, qr_type: e.target.value })}
+                  onChange={(e) => {
+                    const newType = e.target.value;
+                    setQrForm({ ...qrForm, qr_type: newType, form_id: newType.includes('exit') ? '' : qrForm.form_id });
+                  }}
                   className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-blue-500 focus:bg-white transition-colors text-slate-700 font-medium"
                 >
-                  <option value="visitor">Visitor</option>
-                  <option value="vehicle">Vehicle</option>
+                  <option value="visitor">Entry - Visitor</option>
+                  <option value="vehicle">Entry - Vehicle</option>
+                  <option value="exit_visitor">Exit - Visitor</option>
+                  <option value="exit_vehicle">Exit - Vehicle</option>
                 </select>
               </div>
 
-              <div>
-                <label className="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1.5">Linked Form *</label>
-                {forms.length === 0 ? (
-                  <div className="p-3.5 bg-amber-50 border border-amber-200 text-amber-800 rounded-xl text-xs flex flex-col gap-1.5">
-                    <p className="font-bold flex items-center gap-1">⚠️ No Forms Configured</p>
-                    <p className="text-[11px] leading-relaxed text-amber-700">You must create at least one dynamic form before generating QR passes. Please go to the Forms tab to add a form first.</p>
-                  </div>
-                ) : (
-                  <select
-                    required
-                    value={qrForm.form_id}
-                    onChange={(e) => setQrForm({ ...qrForm, form_id: e.target.value })}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-blue-500 focus:bg-white transition-colors text-slate-700 font-medium"
-                  >
-                    <option value="" disabled>Select a form...</option>
-                    {forms.map((f) => (
-                      <option key={f.form_id} value={f.form_id.toString()}>
-                        {f.name}
-                      </option>
-                    ))}
-                  </select>
-                )}
-              </div>
+              {!qrForm.qr_type.includes('exit') && (
+                <div>
+                  <label className="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1.5">Linked Form *</label>
+                  {forms.length === 0 ? (
+                    <div className="p-3.5 bg-amber-50 border border-amber-200 text-amber-800 rounded-xl text-xs flex flex-col gap-1.5">
+                      <p className="font-bold flex items-center gap-1">⚠️ No Forms Configured</p>
+                      <p className="text-[11px] leading-relaxed text-amber-700">You must create at least one dynamic form before generating QR passes. Please go to the Forms tab to add a form first.</p>
+                    </div>
+                  ) : (
+                    <select
+                      required
+                      value={qrForm.form_id}
+                      onChange={(e) => setQrForm({ ...qrForm, form_id: e.target.value })}
+                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-blue-500 focus:bg-white transition-colors text-slate-700 font-medium"
+                    >
+                      <option value="" disabled>Select a form...</option>
+                      {forms.map((f) => (
+                        <option key={f.form_id} value={f.form_id.toString()}>
+                          {f.name}
+                        </option>
+                      ))}
+                    </select>
+                  )}
+                </div>
+              )}
 
               <div>
                 <label className="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1.5">QR Identifier Name *</label>
@@ -1522,9 +1529,9 @@ function QRCodeCard({ qrId, isAdmin, onToggleStatus, onEditQR, triggerAlert }: Q
           <div className="flex flex-col gap-1 mt-1">
             <span className="font-mono text-[10px] text-slate-500">{qrDetail.code}</span>
             <span className={`inline-flex items-center px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider w-fit ${
-              qrDetail.qr_type === 'vehicle' ? 'bg-indigo-50 text-indigo-700 border border-indigo-200' : 'bg-cyan-50 text-cyan-700 border border-cyan-200'
+              qrDetail.qr_type.includes('vehicle') ? 'bg-indigo-50 text-indigo-700 border border-indigo-200' : 'bg-cyan-50 text-cyan-700 border border-cyan-200'
             }`}>
-              {qrDetail.qr_type === 'vehicle' ? 'Vehicle Pass' : 'Visitor Pass'}
+              {qrDetail.qr_type.includes('exit') ? 'Exit' : 'Entry'} {qrDetail.qr_type.includes('vehicle') ? 'Vehicle Pass' : 'Visitor Pass'}
             </span>
           </div>
         </div>

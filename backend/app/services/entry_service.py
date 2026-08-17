@@ -30,7 +30,8 @@ class EntryService:
             "active": is_active,
             "form_id": form.form_id if form else None,
             "form_name": form.name if form else None,
-            "form_schema": form.schema if form else None
+            "form_schema": form.schema if form else None,
+            "qr_type": qr.qr_type
         }
 
     @staticmethod
@@ -104,4 +105,62 @@ class EntryService:
             "qr_code_id": db_response.qr_code_id,
             "response_data": db_response.form_data,
             "created_at": db_response.created_at
+        }
+
+    @staticmethod
+    def process_checkout(db: Session, public_code: str, pass_id: int, security_pin: str):
+        from datetime import datetime
+        qr = db.query(QRCode).filter(QRCode.code == public_code).first()
+        if not qr:
+            raise HTTPException(status_code=404, detail="QR code not found")
+        if not qr.is_active:
+            raise HTTPException(status_code=400, detail="QR code is inactive")
+        if qr.qr_type not in ["exit_visitor", "exit_vehicle"]:
+            raise HTTPException(status_code=400, detail="QR code is not an exit type")
+
+        security = db.query(Security).filter(
+            Security.security_pin == security_pin,
+            Security.is_active == True
+        ).first()
+        if not security:
+            raise HTTPException(status_code=403, detail="Invalid or inactive security PIN")
+
+        gate = qr.gate
+        campus = gate.campus if gate else None
+        if not campus:
+            raise HTTPException(status_code=500, detail="QR code has no campus associated")
+
+        if qr.qr_type == "exit_vehicle":
+            from app.models.vehicle import Vehicle
+            record = db.query(Vehicle).filter(Vehicle.vehicle_id == pass_id).first()
+        else:
+            from app.models.visitor import Visitor
+            record = db.query(Visitor).filter(Visitor.visitor_id == pass_id).first()
+
+        if not record:
+            raise HTTPException(status_code=404, detail="Pass ID not found")
+
+        record_gate = record.gate
+        record_campus = record_gate.campus if record_gate else None
+
+        if not record_campus or record_campus.campus_id != campus.campus_id:
+            raise HTTPException(status_code=403, detail="Pass ID belongs to a different campus")
+
+        if record.checked_out_at:
+            raise HTTPException(status_code=400, detail="Already checked out")
+
+        record.checked_out_at = datetime.utcnow()
+        record.checkout_security_id = security.security_id
+        db.commit()
+
+        duration = record.checked_out_at - record.created_at
+        duration_minutes = int(duration.total_seconds() / 60)
+
+        return {
+            "message": "Checkout successful",
+            "pass_id": pass_id,
+            "checked_out_at": record.checked_out_at,
+            "visit_duration_minutes": duration_minutes,
+            "campus_name": campus.name,
+            "gate_name": gate.name
         }
