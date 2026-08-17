@@ -76,9 +76,9 @@ export default function AppointmentsPage() {
     } catch (err: any) {
       const detail = err.response?.data?.detail;
       if (Array.isArray(detail)) {
-        alert("Validation Error: " + detail.map((d: any) => `${d.loc[d.loc.length - 1]}: ${d.msg}`).join(", "));
+        setError("Validation Error: " + detail.map((d: any) => `${d.loc[d.loc.length - 1]}: ${d.msg}`).join(", "));
       } else {
-        alert(detail || "Failed to create appointment");
+        setError(detail || "Failed to create appointment");
       }
     } finally {
       setFormLoading(false);
@@ -86,19 +86,18 @@ export default function AppointmentsPage() {
   };
 
   const handleCancel = async (id: number) => {
-    if (!confirm('Are you sure you want to cancel this appointment?')) return;
     try {
       await appointmentService.cancelAppointment(id);
       setAppointments(appointments.map(a => a.appointment_id === id ? { ...a, status: 'CANCELLED' } : a));
     } catch (err: any) {
-      alert(err.response?.data?.detail || "Failed to cancel appointment");
+      setError(err.response?.data?.detail || "Failed to cancel appointment");
     }
   };
 
   const copyUrl = (code: string) => {
     const url = `${window.location.origin}/appointment/${code}`;
     navigator.clipboard.writeText(url);
-    alert('Link copied to clipboard!');
+    // Removed alert
   };
 
   const getStatusBadge = (status: string) => {

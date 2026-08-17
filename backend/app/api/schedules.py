@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import desc
 from app.core.database import get_db
 from app.models.schedule import ScheduledVisit
@@ -12,13 +12,13 @@ router = APIRouter()
 
 @router.get("/", response_model=list[ScheduleResponse])
 def get_schedules(db: Session = Depends(get_db)):
-    schedules = db.query(ScheduledVisit).order_by(desc(ScheduledVisit.expected_date)).all()
+    schedules = db.query(ScheduledVisit).options(
+        joinedload(ScheduledVisit.campus),
+        joinedload(ScheduledVisit.gate)
+    ).order_by(desc(ScheduledVisit.expected_date)).all()
     
     response = []
     for s in schedules:
-        campus = db.query(Campus).filter(Campus.campus_id == s.campus_id).first()
-        gate = db.query(Gate).filter(Gate.gate_id == s.gate_id).first()
-        
         # Build response manually to include campus_name and gate_name
         resp_dict = {
             "scheduled_visit_id": s.scheduled_visit_id,
@@ -31,8 +31,8 @@ def get_schedules(db: Session = Depends(get_db)):
             "qr_pass_value": s.qr_pass_value,
             "status": s.status,
             "created_at": s.created_at,
-            "campus_name": campus.name if campus else "Unknown",
-            "gate_name": gate.name if gate else "Unknown"
+            "campus_name": s.campus.name if s.campus else "Unknown",
+            "gate_name": s.gate.name if s.gate else "Unknown"
         }
         response.append(resp_dict)
         

@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { authService } from '@/services/authService';
-import { Lock, User, Loader2, Shield } from 'lucide-react';
+import { Lock, User, Loader2 } from 'lucide-react';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -15,6 +15,7 @@ export default function LoginPage() {
   // Clear existing session on login page load
   useEffect(() => {
     localStorage.removeItem('user');
+    localStorage.removeItem('access_token');
   }, []);
 
   const handleLogin = async (e: React.FormEvent) => {

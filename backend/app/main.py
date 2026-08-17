@@ -16,7 +16,7 @@ from app.api.notifications import router as notifications_router
 from app.api.schedules import router as schedules_router
 import app.models # Register all models to SQLAlchemy's metadata
 from fastapi import Depends
-from app.core.security import get_current_user
+from app.core.security import get_current_user, require_roles
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -35,7 +35,7 @@ app = FastAPI(title="Digital Entry API", lifespan=lifespan)
 # Configure CORS for local development
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["http://localhost:3000"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -50,15 +50,17 @@ app.include_router(notifications_router, prefix="/api/notifications", tags=["Not
 
 # Protected routes
 protected_dependencies = [Depends(get_current_user)]
+admin_dependencies = [Depends(get_current_user), Depends(require_roles(["admin"]))]
+
 app.include_router(campus_router, prefix="/api/campuses", tags=["Campuses"], dependencies=protected_dependencies)
 app.include_router(gate_router, prefix="/api", tags=["Gates"], dependencies=protected_dependencies)
 app.include_router(qr_code_router, prefix="/api", tags=["QR Codes"], dependencies=protected_dependencies)
-app.include_router(forms_router, prefix="/api/forms", tags=["Dynamic Forms"], dependencies=protected_dependencies)
-app.include_router(security_router, prefix="/api/security", tags=["Security"], dependencies=protected_dependencies)
-app.include_router(visitors_router, prefix="/api/visitors", tags=["Visitors"], dependencies=protected_dependencies)
+app.include_router(forms_router, prefix="/api/forms", tags=["Dynamic Forms"], dependencies=admin_dependencies)
+app.include_router(security_router, prefix="/api/security", tags=["Security"], dependencies=admin_dependencies)
+app.include_router(visitors_router, prefix="/api/visitors", tags=["Visitors"], dependencies=admin_dependencies)
 app.include_router(vehicles_router, prefix="/api/vehicles", tags=["Vehicles"], dependencies=protected_dependencies)
 app.include_router(analytics_router, prefix="/api/analytics", tags=["Analytics"], dependencies=protected_dependencies)
-app.include_router(schedules_router, prefix="/api/schedules", tags=["Schedules"], dependencies=protected_dependencies)
+app.include_router(schedules_router, prefix="/api/schedules", tags=["Schedules"], dependencies=admin_dependencies)
 app.include_router(appointments_router, prefix="/api/appointments", tags=["Appointments"], dependencies=protected_dependencies)
 
 @app.get("/")

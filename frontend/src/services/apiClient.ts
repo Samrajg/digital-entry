@@ -16,19 +16,6 @@ apiClient.interceptors.request.use(
       const storedToken = localStorage.getItem('access_token');
       if (storedToken) {
         config.headers['Authorization'] = `Bearer ${storedToken}`;
-      } else {
-        // Fallback for transition if backend not fully updated yet
-        const storedUser = localStorage.getItem('user');
-        if (storedUser) {
-          try {
-            const user = JSON.parse(storedUser);
-            if (user && user.user_id) {
-              config.headers['X-User-Id'] = user.user_id.toString();
-            }
-          } catch (e) {
-            console.error('Error parsing user session for X-User-Id header:', e);
-          }
-        }
       }
     }
     return config;

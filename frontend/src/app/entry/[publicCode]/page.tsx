@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { CheckCircle, Shield, Loader2, Search, ArrowRight, Building2, MapPin } from 'lucide-react';
+import { apiClient } from '@/services/apiClient';
 
 interface FormFieldSchema {
   id: string;
@@ -42,18 +43,13 @@ export default function PublicEntryPage() {
   const [scheduleApplied, setScheduleApplied] = useState(false);
   const [scheduleLoading, setScheduleLoading] = useState(false);
 
-  const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
-
   useEffect(() => {
     if (!publicCode) return;
     
     // Fetch public context config based on the scanned QR string
-    fetch(`${API_URL}/api/public/entry/${publicCode}`)
+    apiClient.get(`/api/public/entry/${publicCode}`)
       .then(res => {
-        if (!res.ok) throw new Error('Invalid or Inactive QR Code');
-        return res.json();
-      })
-      .then((data: PublicContext) => {
+        const data = res.data;
         if (!data.active) {
           throw new Error('This entrance point is currently inactive.');
         }
@@ -70,10 +66,14 @@ export default function PublicEntryPage() {
         setLoading(false);
       })
       .catch(err => {
-        setError(err.message);
+        if (err.response?.data?.detail) {
+          setError(err.response.data.detail);
+        } else {
+          setError(err.message);
+        }
         setLoading(false);
       });
-  }, [publicCode, API_URL]);
+  }, [publicCode]);
 
   const handleFieldChange = (id: string, value: any) => {
     setFormData(prev => ({ ...prev, [id]: value }));
@@ -83,9 +83,8 @@ export default function PublicEntryPage() {
     if (!schedulePass) return;
     setScheduleLoading(true);
     try {
-      const res = await fetch(`${API_URL}/api/public/schedule/${schedulePass}`);
-      if (!res.ok) throw new Error('Invalid or expired pass code');
-      const data = await res.json();
+      const res = await apiClient.get(`/api/public/schedule/${schedulePass}`);
+      const data = res.data;
       
       // Try to map schedule fields to form fields
       setFormData(prev => {
@@ -101,9 +100,13 @@ export default function PublicEntryPage() {
         return newData;
       });
       setScheduleApplied(true);
-      alert('Pre-registered data applied!');
+      // Removed alert
     } catch (err: any) {
-      alert(err.message);
+      if (err.response?.data?.detail) {
+        setError(err.response.data.detail);
+      } else {
+        setError(err.message);
+      }
     } finally {
       setScheduleLoading(false);
     }
@@ -115,28 +118,20 @@ export default function PublicEntryPage() {
     setError('');
 
     try {
-      const res = await fetch(`${API_URL}/api/public/entry/${publicCode}/register`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ 
-          security_pin: securityPin,
-          response_data: formData,
-          schedule_pass: scheduleApplied ? schedulePass : undefined
-        }),
+      const res = await apiClient.post(`/api/public/entry/${publicCode}/register`, { 
+        security_pin: securityPin,
+        response_data: formData,
+        schedule_pass: scheduleApplied ? schedulePass : undefined
       });
 
-      if (!res.ok) {
-        const errorData = await res.json();
-        throw new Error(errorData.detail || 'Failed to submit registration');
-      }
-
-      const pass = await res.json();
-      setPassData(pass);
+      setPassData(res.data);
       setSuccess(true);
     } catch (err: any) {
-      setError(err.message);
+      if (err.response?.data?.detail) {
+        setError(err.response.data.detail);
+      } else {
+        setError(err.message || 'Failed to submit registration');
+      }
     } finally {
       setSubmitting(false);
     }
@@ -193,7 +188,7 @@ export default function PublicEntryPage() {
                 <button
                   onClick={() => {
                     navigator.clipboard.writeText(passData.response_id.toString().padStart(6, '0'));
-                    alert('Pass ID copied to clipboard!');
+                    // Removed alert
                   }}
                   className="text-xs bg-slate-200 hover:bg-slate-300 text-slate-700 px-3 py-1.5 rounded-lg font-bold transition-colors"
                 >

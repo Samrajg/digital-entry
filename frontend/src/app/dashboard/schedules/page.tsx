@@ -94,7 +94,7 @@ export default function SchedulesPage() {
       setGeneratedPass({ qr_pass_value: res.data.qr_pass_value, name: res.data.visitor_name });
       fetchSchedules();
     } catch (err: any) {
-      alert(err.response?.data?.detail || "Failed to create schedule");
+      setError(err.response?.data?.detail || "Failed to create schedule");
     } finally {
       setIsSubmitting(false);
     }
@@ -113,7 +113,7 @@ export default function SchedulesPage() {
 
   const copyQrLink = (passValue: string) => {
     navigator.clipboard.writeText(passValue);
-    alert('Pass code copied to clipboard!');
+    // Removed alert
   };
 
   return (

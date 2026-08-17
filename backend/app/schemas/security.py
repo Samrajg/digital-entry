@@ -14,7 +14,6 @@ class SecurityUpdate(BaseModel):
 class SecurityResponse(BaseModel):
     security_id: int
     security_name: str
-    security_pin: str
     is_active: bool
     created_at: datetime
 

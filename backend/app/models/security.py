@@ -7,6 +7,6 @@ class Security(Base):
 
     security_id = Column(Integer, primary_key=True, index=True, autoincrement=True)
     security_name = Column(String(255), nullable=False)
-    security_pin = Column(String(4), unique=True, nullable=False)
+    security_pin = Column(String(255), nullable=False)
     is_active = Column(Boolean, default=True, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)

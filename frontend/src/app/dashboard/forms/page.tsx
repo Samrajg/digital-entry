@@ -29,6 +29,7 @@ export default function FormsPage() {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [forms, setForms] = useState<DynamicForm[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
   // Form Builder State
   const [isBuilderOpen, setIsBuilderOpen] = useState(false);
@@ -131,12 +132,13 @@ export default function FormsPage() {
   };
 
   const handleSaveForm = async () => {
+    setError('');
     if (!newFormId) {
-      alert("Please provide a unique Form ID.");
+      setError("Please provide a unique Form ID.");
       return;
     }
     if (!newFormName) {
-      alert("Please provide a name for the form.");
+      setError("Please provide a name for the form.");
       return;
     }
     
@@ -168,7 +170,7 @@ export default function FormsPage() {
     } catch (e) {
       setProgressModal({ isOpen: false, progress: 0, title: '', message: '' });
       console.error('Failed to save form', e);
-      alert("Error saving form");
+      setError("Error saving form");
     }
   };
 
@@ -240,6 +242,11 @@ export default function FormsPage() {
                 <X className="w-6 h-6" />
               </button>
             </div>
+            {error && (
+              <div className="px-6 py-3 bg-red-50 border-b border-red-200 text-red-600 text-sm font-semibold">
+                {error}
+              </div>
+            )}
             
             <div className="p-6 overflow-y-auto flex-1 flex flex-col md:flex-row gap-8">
               {/* Left Column: Form Details & Tools */}

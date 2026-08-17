@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { CheckCircle, Shield, Loader2, ArrowRight, Building2, MapPin, LogOut } from 'lucide-react';
+import { apiClient } from '@/services/apiClient';
 
 interface PublicContext {
   campusName: string;
@@ -26,17 +27,12 @@ export default function PublicExitPage() {
   const [success, setSuccess] = useState(false);
   const [checkoutData, setCheckoutData] = useState<any>(null);
   
-  const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
-
   useEffect(() => {
     if (!publicCode) return;
     
-    fetch(`${API_URL}/api/public/exit/${publicCode}`)
+    apiClient.get(`/api/public/exit/${publicCode}`)
       .then(res => {
-        if (!res.ok) throw new Error('Invalid or Inactive Exit QR Code');
-        return res.json();
-      })
-      .then((data: PublicContext) => {
+        const data = res.data;
         if (!data.active) {
           throw new Error('This exit point is currently inactive.');
         }
@@ -44,10 +40,14 @@ export default function PublicExitPage() {
         setLoading(false);
       })
       .catch(err => {
-        setError(err.message);
+        if (err.response?.data?.detail) {
+          setError(err.response.data.detail);
+        } else {
+          setError(err.message);
+        }
         setLoading(false);
       });
-  }, [publicCode, API_URL]);
+  }, [publicCode]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -57,27 +57,19 @@ export default function PublicExitPage() {
     setError('');
 
     try {
-      const res = await fetch(`${API_URL}/api/public/exit/${publicCode}/checkout`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ 
-          pass_id: parseInt(passId, 10),
-          security_pin: securityPin
-        }),
+      const res = await apiClient.post(`/api/public/exit/${publicCode}/checkout`, { 
+        pass_id: parseInt(passId, 10),
+        security_pin: securityPin
       });
 
-      if (!res.ok) {
-        const errorData = await res.json();
-        throw new Error(errorData.detail || 'Failed to submit checkout');
-      }
-
-      const data = await res.json();
-      setCheckoutData(data);
+      setCheckoutData(res.data);
       setSuccess(true);
     } catch (err: any) {
-      setError(err.message);
+      if (err.response?.data?.detail) {
+        setError(err.response.data.detail);
+      } else {
+        setError(err.message || 'Failed to submit checkout');
+      }
     } finally {
       setSubmitting(false);
     }

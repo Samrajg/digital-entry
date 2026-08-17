@@ -1,6 +1,6 @@
 from sqlalchemy.orm import Session
 from fastapi import HTTPException, status
-from app.models.dynamic_response import DynamicResponse
+
 from app.models.qr_code import QRCode
 from app.models.gate import Gate
 from app.models.campus import Campus
@@ -46,10 +46,9 @@ class EntryService:
         if not qr.form_id:
             raise HTTPException(status_code=400, detail="QR code has no form attached")
 
-        security = db.query(Security).filter(
-            Security.security_pin == entry_data.security_pin,
-            Security.is_active == True
-        ).first()
+        from app.core.security import verify_password
+        securities = db.query(Security).filter(Security.is_active == True).all()
+        security = next((s for s in securities if verify_password(entry_data.security_pin, s.security_pin)), None)
 
         if not security:
             raise HTTPException(status_code=403, detail="Invalid or inactive security PIN")
@@ -60,6 +59,7 @@ class EntryService:
                 form_id=qr.form_id,
                 qr_code_id=qr.qr_code_id,
                 gate_id=qr.gate_id,
+                campus_id=qr.gate.campus_id if qr.gate else 1,
                 security_id=security.security_id,
                 form_data=entry_data.response_data
             )
@@ -69,6 +69,7 @@ class EntryService:
                 form_id=qr.form_id,
                 qr_code_id=qr.qr_code_id,
                 gate_id=qr.gate_id,
+                campus_id=qr.gate.campus_id if qr.gate else 1,
                 security_id=security.security_id,
                 form_data=entry_data.response_data
             )
@@ -118,10 +119,10 @@ class EntryService:
         if qr.qr_type not in ["exit_visitor", "exit_vehicle"]:
             raise HTTPException(status_code=400, detail="QR code is not an exit type")
 
-        security = db.query(Security).filter(
-            Security.security_pin == security_pin,
-            Security.is_active == True
-        ).first()
+        from app.core.security import verify_password
+        securities = db.query(Security).filter(Security.is_active == True).all()
+        security = next((s for s in securities if verify_password(security_pin, s.security_pin)), None)
+        
         if not security:
             raise HTTPException(status_code=403, detail="Invalid or inactive security PIN")
 

@@ -8,7 +8,9 @@ from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.models.user import User
 
-SECRET_KEY = "digital-entry-super-secret-key-change-in-production"
+from app.core.config import settings
+
+SECRET_KEY = settings.SECRET_KEY if hasattr(settings, "SECRET_KEY") else "digital-entry-super-secret-key-change-in-production"
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
@@ -19,8 +21,7 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
     try:
         return pwd_context.verify(plain_password, hashed_password)
     except Exception:
-        # Fallback for plain-text matches (during transition)
-        return plain_password == hashed_password
+        return False
 
 def get_password_hash(password: str) -> str:
     return pwd_context.hash(password)

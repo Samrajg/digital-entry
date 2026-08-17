@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import { 
   Shield, LogOut, User as UserIcon, Building2, DoorOpen, QrCode, 
-  LayoutDashboard, Users, Truck, Bell, X, Menu, Sun, Moon, Monitor, CalendarDays
+  LayoutDashboard, Users, Truck, Bell, X, Menu, Sun, Moon, CalendarDays
 } from 'lucide-react';
 import { User } from '@/services/authService';
 import { useTheme } from './ThemeProvider';
@@ -51,6 +51,9 @@ export default function Navbar({ currentUser }: NavbarProps) {
     const token = localStorage.getItem('access_token');
     if (!token) return;
 
+    let isMounted = true;
+    let reconnectTimer: NodeJS.Timeout;
+
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     const host = process.env.NEXT_PUBLIC_API_URL 
       ? process.env.NEXT_PUBLIC_API_URL.replace(/^https?:\/\//, '') 
@@ -59,6 +62,7 @@ export default function Navbar({ currentUser }: NavbarProps) {
     const wsUrl = `${protocol}//${host}/api/notifications/ws?token=${token}`;
     
     const connectWs = () => {
+      if (!isMounted) return;
       const ws = new WebSocket(wsUrl);
       ws.onmessage = (event) => {
         try {
@@ -79,12 +83,20 @@ export default function Navbar({ currentUser }: NavbarProps) {
         } catch (err) {}
       };
       
-      ws.onclose = () => setTimeout(connectWs, 5000);
+      ws.onclose = () => {
+        if (isMounted) {
+          reconnectTimer = setTimeout(connectWs, 5000);
+        }
+      };
       wsRef.current = ws;
     };
     
     connectWs();
-    return () => wsRef.current?.close();
+    return () => {
+      isMounted = false;
+      clearTimeout(reconnectTimer);
+      wsRef.current?.close();
+    };
   }, [currentUser]);
 
   const currentTab = searchParams ? searchParams.get('tab') : null;

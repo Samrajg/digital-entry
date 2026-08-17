@@ -127,7 +127,9 @@ class AppointmentService:
             raise HTTPException(status_code=400, detail=f"Appointment is for {appointment.appointment_date}, not today")
             
         # Validate security PIN
-        guard = db.query(Security).filter(Security.security_pin == security_pin).first()
+        from app.core.security import verify_password
+        securities = db.query(Security).filter(Security.is_active == True).all()
+        guard = next((s for s in securities if verify_password(security_pin, s.security_pin)), None)
         if not guard:
             raise HTTPException(status_code=403, detail="Invalid security PIN")
             
