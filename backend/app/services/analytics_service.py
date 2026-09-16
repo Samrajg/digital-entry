@@ -100,6 +100,61 @@ class AnalyticsService:
         activities.sort(key=lambda x: x["timestamp"], reverse=True)
         activities = activities[:5]
 
+        # 6. Anomalies (Overstays)
+        eight_hours_ago = datetime.utcnow() - timedelta(hours=8)
+        overstay_visitors = db.query(Visitor).filter(
+            Visitor.checked_out_at.is_(None),
+            Visitor.created_at < eight_hours_ago
+        ).all()
+        
+        twelve_hours_ago = datetime.utcnow() - timedelta(hours=12)
+        overstay_vehicles = db.query(Vehicle).filter(
+            Vehicle.checked_out_at.is_(None),
+            Vehicle.created_at < twelve_hours_ago
+        ).all()
+        
+        def _visitor_display_name(form_data: dict) -> str:
+            """
+            BUG-11 FIX: Visitor model has no visitor_name column.
+            The visitor's name lives inside the JSON form_data dict.
+            Try common field names in priority order, fall back gracefully.
+            """
+            if not form_data:
+                return "Unknown Visitor"
+            for key in ("visitor_name", "name", "full_name", "Name", "Visitor Name"):
+                val = form_data.get(key)
+                if val and str(val).strip():
+                    return str(val).strip()
+            return "Unknown Visitor"
+
+        anomalies = []
+        for v in overstay_visitors:
+            duration = datetime.utcnow() - v.created_at
+            hours = int(duration.total_seconds() // 3600)
+            # BUG-11 FIX: use form_data to get name, not the non-existent visitor_name column
+            name = _visitor_display_name(v.form_data)
+            anomalies.append({
+                "type": "Visitor",
+                "id": f"V-{v.visitor_id}",
+                "name": name,
+                "duration_hours": hours,
+                "message": f"Visitor {name} has been on campus for {hours} hours"
+            })
+            
+        for v in overstay_vehicles:
+            duration = datetime.utcnow() - v.created_at
+            hours = int(duration.total_seconds() // 3600)
+            name = v.form_data.get('driver_name', 'Unknown Driver') if v.form_data else 'Unknown Driver'
+            anomalies.append({
+                "type": "Vehicle",
+                "id": f"C-{v.vehicle_id}",
+                "name": name,
+                "duration_hours": hours,
+                "message": f"Vehicle (Driver: {name}) has been on campus for {hours} hours (Overnight)"
+            })
+            
+        anomalies.sort(key=lambda x: x["duration_hours"], reverse=True)
+
         # Format output
         return {
             "stats": {
@@ -116,5 +171,6 @@ class AnalyticsService:
                 {"name": "Visitors", "value": total_visitors},
                 {"name": "Vehicles", "value": total_vehicles}
             ],
-            "recent_activity": activities
+            "recent_activity": activities,
+            "anomalies": anomalies
         }

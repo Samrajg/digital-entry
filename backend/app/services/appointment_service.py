@@ -80,15 +80,50 @@ class AppointmentService:
     @staticmethod
     def cancel_appointment(db: Session, appointment_id: int, user: User) -> Appointment:
         appointment = AppointmentService.get_appointment(db, appointment_id, user)
-        
+
         if appointment.status != "SCHEDULED":
             raise HTTPException(status_code=400, detail=f"Cannot cancel appointment with status {appointment.status}")
-            
+
         appointment.status = "CANCELLED"
         appointment.updated_at = datetime.utcnow()
         db.commit()
         db.refresh(appointment)
         return appointment
+
+    @staticmethod
+    def update_appointment(db: Session, appointment_id: int, update_in, user: User) -> Appointment:
+        """
+        BUG-10 FIX: Implement the update logic for PUT /api/appointments/{id}.
+        Previously this endpoint was called by the frontend but did not exist on the backend.
+        - Only SCHEDULED appointments can be edited.
+        - Only the creator (or an admin) may edit.
+        - All update fields are optional; only provided fields are applied.
+        """
+        appointment = AppointmentService.get_appointment(db, appointment_id, user)
+
+        if appointment.status != "SCHEDULED":
+            raise HTTPException(
+                status_code=400,
+                detail=f"Cannot edit appointment with status '{appointment.status}'. "
+                       "Only SCHEDULED appointments can be modified."
+            )
+
+        update_data = update_in.model_dump(exclude_unset=True)
+
+        # If campus_id is changing, validate the new campus exists
+        if "campus_id" in update_data:
+            campus = db.query(Campus).filter(Campus.campus_id == update_data["campus_id"]).first()
+            if not campus:
+                raise HTTPException(status_code=404, detail="Campus not found")
+
+        for field, value in update_data.items():
+            setattr(appointment, field, value)
+
+        appointment.updated_at = datetime.utcnow()
+        db.commit()
+        db.refresh(appointment)
+        return appointment
+
 
     @staticmethod
     def get_todays_expected(db: Session) -> List[Appointment]:

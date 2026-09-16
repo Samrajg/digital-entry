@@ -5,7 +5,8 @@ from typing import List
 from app.core.database import get_db
 from app.core.security import get_current_user
 from app.models.user import User
-from app.schemas.appointment import AppointmentCreate, AppointmentResponse
+# BUG-10 FIX: Import AppointmentUpdate so we can wire PUT /{appointment_id}
+from app.schemas.appointment import AppointmentCreate, AppointmentUpdate, AppointmentResponse
 from app.services.appointment_service import AppointmentService
 
 router = APIRouter()
@@ -90,4 +91,24 @@ def cancel_appointment(
     response = AppointmentResponse.from_orm(appointment)
     if appointment.campus:
         response.campus_name = appointment.campus.name
+    return response
+
+
+@router.put("/{appointment_id}", response_model=AppointmentResponse)
+def update_appointment(
+    appointment_id: int,
+    update_in: AppointmentUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    BUG-10 FIX: Edit a SCHEDULED appointment.
+    Only the creator or an admin can edit. Only SCHEDULED appointments can be modified.
+    Send only the fields you want to change — all fields are optional.
+    """
+    appointment = AppointmentService.update_appointment(db, appointment_id, update_in, current_user)
+    response = AppointmentResponse.from_orm(appointment)
+    if appointment.campus:
+        response.campus_name = appointment.campus.name
+    response.qr_image_base64 = AppointmentService.get_appointment_qr_base64(appointment)
     return response
