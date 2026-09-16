@@ -132,8 +132,23 @@ class AppointmentService:
         guard = next((s for s in securities if verify_password(security_pin, s.security_pin)), None)
         if not guard:
             raise HTTPException(status_code=403, detail="Invalid security PIN")
-            
-        # Create visitor record
+
+        # Resolve gate's QR code to attach to the visitor record
+        # BUG-04 FIX: Do NOT call QRCodeService.create_qr_code — that creates a new persistent
+        # gate QR code (wrong usage). Instead find the active gate QR code for this gate,
+        # or fall back to any active QR code on the gate for recording purposes.
+        from app.models.qr_code import QRCode
+        gate_qr = db.query(QRCode).filter(
+            QRCode.gate_id == gate_id,
+            QRCode.is_active == True
+        ).first()
+
+        if not gate_qr:
+            raise HTTPException(
+                status_code=400,
+                detail=f"No active QR code found for gate {gate_id}. Cannot process check-in."
+            )
+
         form_data = {
             "purpose": appointment.purpose,
             "meeting_with": appointment.employee_name,
@@ -143,15 +158,13 @@ class AppointmentService:
             "visitor_phone": appointment.visitor_phone,
             "visitor_count": appointment.visitor_count
         }
-        
-        # Assuming QRCodeService creates a pass
-        qr_code = QRCodeService.create_qr_code(db, "visitor")
-        
+
+        # Use the gate's form_id if available, else use a sentinel value
+        form_id = gate_qr.form_id or "appointment_form"
+
         visitor = Visitor(
-            visitor_name=appointment.visitor_name,
-            phone_number=appointment.visitor_phone or "N/A",
-            form_id="appointment_form",
-            qr_code_id=qr_code.qr_code_id,
+            form_id=form_id,
+            qr_code_id=gate_qr.qr_code_id,
             gate_id=gate_id,
             campus_id=appointment.campus_id,
             appointment_id=appointment.appointment_id,
@@ -160,7 +173,7 @@ class AppointmentService:
         )
         
         db.add(visitor)
-        db.flush() # get visitor_id
+        db.flush()  # get visitor_id
         
         # Update appointment
         appointment.status = "CHECKED_IN"
@@ -175,7 +188,7 @@ class AppointmentService:
         return {
             "status": "success",
             "message": "Entry Authorized",
-            "pass_id": qr_code.pass_id,
+            "visitor_id": visitor.visitor_id,
             "directions": appointment.meeting_location,
             "employee_name": appointment.employee_name
         }

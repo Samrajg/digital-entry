@@ -23,7 +23,7 @@ packaging==26.3
 passlib==1.7.4
 pillow==12.3.0
 pluggy==1.6.0
-psycopg2-binary==2.9.12
+sqlalchemy-cloudflare-d1>=0.1.0  # Cloudflare D1 SQLAlchemy dialect
 pyasn1==0.6.4
 pycparser==3.0
 pydantic==2.13.4

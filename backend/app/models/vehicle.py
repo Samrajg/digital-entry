@@ -1,5 +1,4 @@
-from sqlalchemy import Column, Integer, String, DateTime, ForeignKey
-from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, JSON
 from sqlalchemy.orm import relationship
 from datetime import datetime
 from app.core.database import Base
@@ -11,14 +10,18 @@ class Vehicle(Base):
     form_id = Column(String(100), ForeignKey("dynamic_forms.form_id", ondelete="CASCADE"), nullable=False, index=True)
     qr_code_id = Column(String(100), ForeignKey("qr_codes.qr_code_id", ondelete="CASCADE"), nullable=False, index=True)
     gate_id = Column(Integer, ForeignKey("gates.gate_id", ondelete="CASCADE"), nullable=False, index=True)
+    # BUG-07 FIX: Added missing campus_id column that entry_service.py was trying to set
+    campus_id = Column(Integer, ForeignKey("campuses.campus_id", ondelete="CASCADE"), nullable=False)
     security_id = Column(Integer, ForeignKey("security.security_id", ondelete="SET NULL"), nullable=True, index=True)
     checkout_security_id = Column(Integer, ForeignKey("security.security_id", ondelete="SET NULL"), nullable=True, index=True)
-    form_data = Column(JSONB, nullable=False)
+    form_data = Column(JSON, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     checked_out_at = Column(DateTime, nullable=True)
 
     qr_code = relationship("QRCode")
     form = relationship("DynamicForm")
     gate = relationship("Gate")
+    campus = relationship("Campus")
     security = relationship("Security", foreign_keys=[security_id])
     checkout_security = relationship("Security", foreign_keys=[checkout_security_id])
+

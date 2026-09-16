@@ -8,4 +8,5 @@ from app.models.dynamic_form import DynamicForm
 from app.models.security import Security
 from app.models.schedule import ScheduledVisit
 from app.models.appointment import Appointment
+from app.models.vehicle import Vehicle
 from app.models.visitor import Visitor
