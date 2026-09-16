@@ -13,8 +13,19 @@ class AnalyticsService:
         seven_days_ago = today - timedelta(days=6)
         
         # 1. Stat cards
-        today_visitors = db.query(Visitor).filter(func.date(Visitor.created_at) == today).count()
-        today_vehicles = db.query(Vehicle).filter(func.date(Vehicle.created_at) == today).count()
+        # BUG-19 FIX: func.date() in D1 returns a string, not a date object, and the behaviour
+        # can be dialect-dependent. Use explicit datetime range comparisons instead —
+        # they work reliably across SQLite and Cloudflare D1.
+        today_start = datetime(today.year, today.month, today.day, 0, 0, 0)
+        today_end = datetime(today.year, today.month, today.day, 23, 59, 59, 999999)
+        today_visitors = db.query(Visitor).filter(
+            Visitor.created_at >= today_start,
+            Visitor.created_at <= today_end
+        ).count()
+        today_vehicles = db.query(Vehicle).filter(
+            Vehicle.created_at >= today_start,
+            Vehicle.created_at <= today_end
+        ).count()
         active_visitors = db.query(Visitor).filter(Visitor.checked_out_at.is_(None)).count()
         active_vehicles = db.query(Vehicle).filter(Vehicle.checked_out_at.is_(None)).count()
         active_gates = db.query(Gate).filter(Gate.is_active == True).count()
@@ -27,25 +38,34 @@ class AnalyticsService:
             d = today - timedelta(days=6-i)
             trends[d.strftime("%Y-%m-%d")] = {"date": d.strftime("%m/%d"), "visitors": 0, "vehicles": 0}
 
-        visitor_trends = db.query(
-            func.date(Visitor.created_at).label('date'),
-            func.count(Visitor.visitor_id).label('count')
-        ).filter(func.date(Visitor.created_at) >= seven_days_ago).group_by(func.date(Visitor.created_at)).all()
+        # BUG-19 FIX: Use datetime range filtering per day instead of func.date() which
+        # returns strings from D1. Query all rows in the 7-day window then group in Python.
+        window_start = datetime(seven_days_ago.year, seven_days_ago.month, seven_days_ago.day, 0, 0, 0)
+        visitor_rows = db.query(Visitor.created_at).filter(Visitor.created_at >= window_start).all()
+        vehicle_rows = db.query(Vehicle.created_at).filter(Vehicle.created_at >= window_start).all()
 
-        vehicle_trends = db.query(
-            func.date(Vehicle.created_at).label('date'),
-            func.count(Vehicle.vehicle_id).label('count')
-        ).filter(func.date(Vehicle.created_at) >= seven_days_ago).group_by(func.date(Vehicle.created_at)).all()
+        for (created_at,) in visitor_rows:
+            if created_at:
+                # Handle both datetime objects and ISO strings returned by D1
+                if isinstance(created_at, str):
+                    try:
+                        created_at = datetime.fromisoformat(created_at.replace("Z", "+00:00"))
+                    except ValueError:
+                        continue
+                date_str = created_at.strftime("%Y-%m-%d")
+                if date_str in trends:
+                    trends[date_str]["visitors"] += 1
 
-        for d, count in visitor_trends:
-            date_str = d.strftime("%Y-%m-%d") if isinstance(d, date) else str(d)
-            if date_str in trends:
-                trends[date_str]["visitors"] = count
-                
-        for d, count in vehicle_trends:
-            date_str = d.strftime("%Y-%m-%d") if isinstance(d, date) else str(d)
-            if date_str in trends:
-                trends[date_str]["vehicles"] = count
+        for (created_at,) in vehicle_rows:
+            if created_at:
+                if isinstance(created_at, str):
+                    try:
+                        created_at = datetime.fromisoformat(created_at.replace("Z", "+00:00"))
+                    except ValueError:
+                        continue
+                date_str = created_at.strftime("%Y-%m-%d")
+                if date_str in trends:
+                    trends[date_str]["vehicles"] += 1
 
         trend_data = list(trends.values())
 

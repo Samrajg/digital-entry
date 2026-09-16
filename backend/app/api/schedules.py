@@ -56,12 +56,16 @@ def create_schedule(schedule: ScheduleCreate, db: Session = Depends(get_db)):
     
     db.add(db_schedule)
     db.commit()
+    # BUG-21 FIX: Use joinedload so relationships are loaded in a single query on refresh
+    # instead of issuing two extra SELECT queries for Campus and Gate separately.
     db.refresh(db_schedule)
+    db.expire(db_schedule)
+    db_schedule = db.query(ScheduledVisit).options(
+        joinedload(ScheduledVisit.campus),
+        joinedload(ScheduledVisit.gate)
+    ).filter(ScheduledVisit.scheduled_visit_id == db_schedule.scheduled_visit_id).first()
     
-    campus = db.query(Campus).filter(Campus.campus_id == db_schedule.campus_id).first()
-    gate = db.query(Gate).filter(Gate.gate_id == db_schedule.gate_id).first()
-    
-    resp_dict = {
+    return {
         "scheduled_visit_id": db_schedule.scheduled_visit_id,
         "visitor_name": db_schedule.visitor_name,
         "purpose": db_schedule.purpose,
@@ -72,15 +76,18 @@ def create_schedule(schedule: ScheduleCreate, db: Session = Depends(get_db)):
         "qr_pass_value": db_schedule.qr_pass_value,
         "status": db_schedule.status,
         "created_at": db_schedule.created_at,
-        "campus_name": campus.name if campus else "Unknown",
-        "gate_name": gate.name if gate else "Unknown"
+        # Use the already-loaded relationship — no extra query needed
+        "campus_name": db_schedule.campus.name if db_schedule.campus else "Unknown",
+        "gate_name": db_schedule.gate.name if db_schedule.gate else "Unknown"
     }
-    
-    return resp_dict
 
 @router.put("/{visit_id}/status", response_model=ScheduleResponse)
 def update_schedule_status(visit_id: int, update: ScheduleUpdateStatus, db: Session = Depends(get_db)):
-    db_schedule = db.query(ScheduledVisit).filter(ScheduledVisit.scheduled_visit_id == visit_id).first()
+    # BUG-21 FIX: Load relationships eagerly from the start so no extra queries are needed later
+    db_schedule = db.query(ScheduledVisit).options(
+        joinedload(ScheduledVisit.campus),
+        joinedload(ScheduledVisit.gate)
+    ).filter(ScheduledVisit.scheduled_visit_id == visit_id).first()
     if not db_schedule:
         raise HTTPException(status_code=404, detail="Schedule not found")
         
@@ -88,10 +95,7 @@ def update_schedule_status(visit_id: int, update: ScheduleUpdateStatus, db: Sess
     db.commit()
     db.refresh(db_schedule)
     
-    campus = db.query(Campus).filter(Campus.campus_id == db_schedule.campus_id).first()
-    gate = db.query(Gate).filter(Gate.gate_id == db_schedule.gate_id).first()
-    
-    resp_dict = {
+    return {
         "scheduled_visit_id": db_schedule.scheduled_visit_id,
         "visitor_name": db_schedule.visitor_name,
         "purpose": db_schedule.purpose,
@@ -102,7 +106,7 @@ def update_schedule_status(visit_id: int, update: ScheduleUpdateStatus, db: Sess
         "qr_pass_value": db_schedule.qr_pass_value,
         "status": db_schedule.status,
         "created_at": db_schedule.created_at,
-        "campus_name": campus.name if campus else "Unknown",
-        "gate_name": gate.name if gate else "Unknown"
+        # Use the relationship loaded by joinedload — no separate Campus/Gate SELECT
+        "campus_name": db_schedule.campus.name if db_schedule.campus else "Unknown",
+        "gate_name": db_schedule.gate.name if db_schedule.gate else "Unknown"
     }
-    return resp_dict

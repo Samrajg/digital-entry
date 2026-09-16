@@ -1,11 +1,12 @@
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
+# BUG-18 FIX: Proper top-level datetime import replaces the __import__('datetime') inline hack
+from datetime import datetime, timezone
 from app.core.database import get_db
 from app.schemas.entry import PublicContextResponse, CheckoutSubmit, CheckoutResponse
 from app.schemas.dynamic_form import DynamicResponseSubmit, DynamicResponseView
 from app.services.entry_service import EntryService
 from app.models.schedule import ScheduledVisit
-from fastapi import HTTPException
 
 router = APIRouter()
 
@@ -68,7 +69,13 @@ def get_public_appointment_context(code: str, db: Session = Depends(get_db)):
         "time_slot": f"{appointment.time_slot_start} - {appointment.time_slot_end}",
         "notes": appointment.notes,
         "status": appointment.status,
-        "is_valid": appointment.status == "SCHEDULED" and appointment.appointment_date == __import__('datetime').datetime.now().date()
+        # BUG-18 FIX: Use datetime.now(timezone.utc).date() — timezone-aware, matches UTC stored in D1.
+        # The old code used __import__('datetime').datetime.now().date() which is:
+        #   1. A code smell (inline __import__ is never acceptable)
+        #   2. Timezone-naive — could give wrong result when server clock != UTC
+        today_utc = datetime.now(timezone.utc).date()
+        "is_valid": appointment.status == "SCHEDULED" and appointment.appointment_date == today_utc
+
     }
 
 @router.post("/appointment/{code}/checkin")

@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from typing import List
+import logging
 
 from app.core.database import get_db
 from app.core.security import get_current_user
@@ -10,6 +11,25 @@ from app.schemas.appointment import AppointmentCreate, AppointmentUpdate, Appoin
 from app.services.appointment_service import AppointmentService
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
+
+
+def _resolve_campus_name(appointment) -> str:
+    """
+    BUG-22 FIX: campus_name was silently staying "" when appointment.campus is None.
+    This happens when a campus is deleted after the appointment was created (cascade
+    on D1 isn't always guaranteed to fire). Emit a warning so it shows in logs and
+    return a clearly informative placeholder instead of a blank string.
+    """
+    if appointment.campus:
+        return appointment.campus.name
+    logger.warning(
+        "Appointment %s (campus_id=%s) has no associated campus — it may have been deleted.",
+        appointment.appointment_id,
+        appointment.campus_id,
+    )
+    return f"[Campus {appointment.campus_id} deleted]"
+
 
 @router.post("/", response_model=AppointmentResponse)
 def create_appointment(
@@ -19,12 +39,8 @@ def create_appointment(
 ):
     """Create a new appointment"""
     appointment = AppointmentService.create_appointment(db, appointment_in, current_user)
-    # Convert to response and inject campus_name
     response = AppointmentResponse.from_orm(appointment)
-    if appointment.campus:
-        response.campus_name = appointment.campus.name
-        
-    # Generate and include the QR code image immediately so the frontend can display it
+    response.campus_name = _resolve_campus_name(appointment)
     response.qr_image_base64 = AppointmentService.get_appointment_qr_base64(appointment)
     return response
 
@@ -36,12 +52,11 @@ def get_appointments(
 ):
     """List appointments (Admins see all, Employees see their own)"""
     appointments = AppointmentService.get_appointments(db, current_user, status)
-    
+
     results = []
     for apt in appointments:
         res = AppointmentResponse.from_orm(apt)
-        if apt.campus:
-            res.campus_name = apt.campus.name
+        res.campus_name = _resolve_campus_name(apt)
         res.qr_image_base64 = AppointmentService.get_appointment_qr_base64(apt)
         results.append(res)
     return results
@@ -54,13 +69,12 @@ def get_todays_expected_appointments(
     """Get today's expected appointments for security guards"""
     if current_user.user_role not in ["admin", "security"]:
         raise HTTPException(status_code=403, detail="Not authorized")
-        
+
     appointments = AppointmentService.get_todays_expected(db)
     results = []
     for apt in appointments:
         res = AppointmentResponse.from_orm(apt)
-        if apt.campus:
-            res.campus_name = apt.campus.name
+        res.campus_name = _resolve_campus_name(apt)
         results.append(res)
     return results
 
@@ -73,10 +87,7 @@ def get_appointment(
     """Get specific appointment details, including QR code"""
     appointment = AppointmentService.get_appointment(db, appointment_id, current_user)
     response = AppointmentResponse.from_orm(appointment)
-    if appointment.campus:
-        response.campus_name = appointment.campus.name
-        
-    # Generate and include the QR code image
+    response.campus_name = _resolve_campus_name(appointment)
     response.qr_image_base64 = AppointmentService.get_appointment_qr_base64(appointment)
     return response
 
@@ -89,8 +100,7 @@ def cancel_appointment(
     """Cancel an appointment"""
     appointment = AppointmentService.cancel_appointment(db, appointment_id, current_user)
     response = AppointmentResponse.from_orm(appointment)
-    if appointment.campus:
-        response.campus_name = appointment.campus.name
+    response.campus_name = _resolve_campus_name(appointment)
     return response
 
 
@@ -108,7 +118,6 @@ def update_appointment(
     """
     appointment = AppointmentService.update_appointment(db, appointment_id, update_in, current_user)
     response = AppointmentResponse.from_orm(appointment)
-    if appointment.campus:
-        response.campus_name = appointment.campus.name
+    response.campus_name = _resolve_campus_name(appointment)
     response.qr_image_base64 = AppointmentService.get_appointment_qr_base64(appointment)
     return response

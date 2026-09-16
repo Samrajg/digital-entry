@@ -53,7 +53,8 @@ class LogService:
         if security_id:
             query = query.filter(Visitor.security_id == security_id)
         if active_only:
-            query = query.filter(Visitor.checked_out_at == None)
+            # BUG-20 FIX: Use .is_(None) instead of == None to avoid SAWarning and generate correct IS NULL SQL
+            query = query.filter(Visitor.checked_out_at.is_(None))
 
         total = query.count()
 
@@ -125,7 +126,8 @@ class LogService:
         if security_id:
             query = query.filter(Vehicle.security_id == security_id)
         if active_only:
-            query = query.filter(Vehicle.checked_out_at == None)
+            # BUG-20 FIX: Use .is_(None) instead of == None to avoid SAWarning and generate correct IS NULL SQL
+            query = query.filter(Vehicle.checked_out_at.is_(None))
 
         total = query.count()
 
